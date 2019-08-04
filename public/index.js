@@ -29,7 +29,31 @@ Vue.component('song-list', {
   template: '#song-list-template',
   props: {
     songs: Array,
+  },
+  methods: {
+    entry: function(song, part) {
+      this.$emit("entry", song, part);
+    },
   }
+});
+
+Vue.component('new-entry-dialog', {
+  data: function () {
+    return { name: "",
+             instName: "",
+             message: "",
+             busy: false,
+           };
+  },
+  props: { status: Object },
+  template: '#new-entry-dialog-template',
+  methods: {
+    hide: function () {
+      this.status.onEntry = false;
+    },
+    apply: function() {
+    },
+  },
 });
 
 Vue.component('new-song-dialog', {
@@ -47,8 +71,6 @@ Vue.component('new-song-dialog', {
   },
   props: { status: Object },
   template: '#new-song-dialog-template',
-  created: function created() {
-  },
   methods: {
     hide: function () {
       this.status.onSongAdd = false
@@ -140,7 +162,10 @@ var app = new Vue({
   el: '#main-frame',
   data: {
     status: {
-      onSongAdd: false
+      onSongAdd: false,
+      onEntry: true,
+      entryTarget: { part: {},
+                     song: {} },
     },
     songs: [],
     error: "",
@@ -158,6 +183,13 @@ var app = new Vue({
           this.songs.push(song);
         }
       });
+    },
+    entry: function (song, part) {
+      this.status.onEntry = true;
+      console.log(part);
+      console.log(song);
+      this.status.entryTarget.part = part;
+      this.status.entryTarget.song = song;
     },
   },
   created: function created() {
