@@ -8,61 +8,135 @@ function routes(req, res, next) {
   if (parsedUrl.pathname == '/api/') {
     return apiEndPoint(req, res, next);
   }
+  if (parsedUrl.pathname == '/') {
+  }
+
   return next();
 }
 
 function apiEndPoint(req, res, next) {
   if (req.body.method == "createSong") {
     createSong(req, res, next);
+  }
+  else if (req.body.method == "listSongs") {
+    listSongs(req, res, next);
+  }
+  else if (req.body.method == "entry") {
+    entry(req, res, next);
   } else {
     res.json({ error: { code: -32601, message: "method_not_found" } });
     next();
   }
 }
-  
+
+function entry(req, res, next) {
+  const params = req.body.params || {};
+  let err = "";
+  let entryId;
+
+  // check params
+  for (var k of ["song_id", "part_id", "name"]) {
+    if (params[k] === undefined || params[k].length == 0) {
+      err = "no_" + k;
+    }
+  }
+  if (err.length) {
+    res.json({ error: { code: -32602, message: err } });
+    return next();
+  }
+
+  model.getOrCreateUser({name: params.name})
+    .then(user => {
+      params.user_id = user.user_id;
+      return model.createEntry(params);
+    })
+    .then(_entryId => {
+      entryId = _entryId;
+      return model.createLog({user_id: params.user_id,
+                              target_id: _entryId,
+                              action: "entry"});
+    })
+    .then(_logId => {
+      res.json({result: {entry: {entry_id: entryId,
+                                 song_id: params.song_id,
+                                 user_id: params.user_id,
+                                 part_id: params.part_id,
+                                }}});
+    })
+    .catch(err => {
+      res.json({ error: { code: -32603, message: err.toString()} });
+    });
+  return;
+}
 
 function createSong(req, res, next) {
   const params = req.body.params;
-  const db = model.connect();
   let err = "";
+  let songId;
 
   // check params
-  for (var k of ["title", "reference", "url", "comment"]) {
+  for (var k of ["title", "reference", "author", "parts"]) {
     if (params[k] === undefined || params[k].length == 0) {
       err = "no_" + k;
     }
   }
 
-  if (err.length) {
-    res.json({ error: { code: -32602, message: err } });
-    return;
+  if (params.url && params.url.length) {
+    try {
+      var parsed = new URL(params.url);
+    }
+    catch (e) {
+      err = "invalid_url";
+    }
   }
 
-  const stmt = db.prepare('INSERT INTO songs (title, reference, url, comment)' +
-                          '           VALUES (?, ?, ?, ?)');
-  stmt.run(params.title, params.reference, params.url, params.comment,
-           function () {
-             stmt.finalize();
+  if (err.length) {
+    res.json({ error: { code: -32602, message: err } });
+    return next();
+  }
 
-             if (!this.lastID) {
-               // error
-               res.json({ error: { code: -32603, message: "insert_failed" } });
-               return;
-             }
-             const songId = this.lastID;
-             db.close();
-
-             res.json({result: { song: { title: params.title,
-                                         reference: params.reference,
-                                         url: params.url,
-                                         comment: params.comment,
-                                         song_id: songId }
-                               }
-                      });
-             next();
-             
-           });
+  model.getOrCreateUser({name: params.author})
+    .then(user => {
+      params.user_id = user.user_id;
+      return model.createSong(params);
+    })
+    .then(_songId => {
+      songId = _songId;
+      return model.createLog({user_id: params.user_id,
+                              target_id: _songId,
+                              action: "create_song"});
+    })
+    .then(_logId => {
+      res.json({result: { song: { title: params.title,
+                                  reference: params.reference,
+                                  url: params.url,
+                                  comment: params.comment,
+                                  song_id: songId,
+                                  user_id: params.user_id
+                                }
+                        }
+               });
+    })
+    .catch(err => {
+      if (err.code && err.code === 'SQLITE_CONSTRAINT') {
+        res.json({ error: { code: -32100, message: "SQLITE_CONSTRAINT" } });
+        return;
+      }
+      console.error(err);
+      res.json({ error: { code: -32603, message: err.toString()}});
+    });
   return;
 }
 
+function listSongs(req, res, next) {
+  const params = req.body.params;
+  model.getSongs()
+    .then((songs) => {
+      res.json({ result: { songs: songs } });
+    })
+    .catch((err) => {
+      res.json({ error: { code: -32603, message: err } });
+    });
+}
+  
 module.exports = exports = routes;

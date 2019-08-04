@@ -1,0 +1,96 @@
+body { padding: 4px; }
+
+header .url-form {margin-bottom: 1em; }
+header .notice { margin-top: 1em; }
+
+.song-list-wrap { margin-bottom: 2em; }
+
+.song-artist { color: gray; font-size: 80%; }
+.song-list { display: table; width: 100%;}
+.song-status { font-size: 80%; }
+
+.song-list-header th, 
+.song-list-footer th {
+    padding: 4px;
+    border-bottom: 1px solid gray;
+    border-right: 1px solid lightgray;
+    text-align: center;
+    background: lightgray;
+    cursor: pointer;
+}
+.song-list-header .sort-order { font-size:80% }
+
+.song-information,
+.song-status,
+.song-player {
+    padding: 4px;
+    border-bottom: 1px solid gray;
+    border-right: 1px solid lightgray;
+}
+
+.song-player.no-entry,
+.song-player.yield-sell {
+    color: #00f;
+}
+
+.song-player { text-align: center; }
+
+.song-player .blank { color: lightgray; }
+.song-information { width: 18em; }
+
+.song-properties {
+    padding: 4px;
+    border: 1px solid;
+}
+
+.song-movie {
+    float: left;
+    margin-right: 8px;
+}
+.song-attributes {
+    padding: 0 8px;
+    line-height: 180%;
+}
+
+.song-name { cursor: pointer; }
+.song-attribute .attribute-name { font-weight: bold; }
+
+.triangle-open {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    margin-left: .255em;
+    vertical-align: .255em;
+    content: "";
+    border-top: .3em solid;
+    border-right: .3em solid transparent;
+    border-bottom: 0;
+    border-left: .3em solid transparent;
+    cursor: pointer;
+}
+
+.triangle-close {
+    display: inline-block;
+    width: 0;
+    height: 0;
+    margin-left: .255em;
+    vertical-align: .1em;
+    content: "";
+    border-left: .3em solid;
+    border-top: .3em solid transparent;
+    border-right: 0;
+    border-bottom: .3em solid transparent;
+    cursor: pointer;
+}
+
+footer {
+    text-align: center;
+}
+
+.show {
+    display: block !important;
+}
+.modal {
+    background: rgba(0, 0, 0, 0.5);
+    overflow: scroll !important;
+}

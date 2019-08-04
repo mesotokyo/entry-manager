@@ -1,31 +1,45 @@
 CREATE TABLE IF NOT EXISTS songs (
-  song_id INT PRIMARY KEY,
-  reference TEXT,
-  title TEXT UNIQUENOT NULL,
+  song_id INTEGER PRIMARY KEY,
+  title TEXT NOT NULL,
+  reference TEXT NOT NULL,
+  user_id INTEGER NOT NULL,
   url TEXT,
-  comment TEXT
+  comment TEXT,
+  create_time TEXT DEFAULT CURRENT_TIMESTAMP,
+  update_time TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(title, reference)
 );
 
 CREATE TABLE IF NOT EXISTS parts (
-  part_id INT PRIMARY KEY,
-  song_id INT NOT NULL,
-  name TEXT UNIQUTE NOT NULL,
-  `order` INT NOT NULL
+  part_id INTEGER PRIMARY KEY,
+  song_id INTEGER NOT NULL,
+  name TEXT NOT NULL,
+  `order` INTEGER NOT NULL,
+  user_id INGEGER
 );
 
 CREATE TABLE IF NOT EXISTS users (
-  user_id INT PRIMARY KEY,
+  user_id INTEGER PRIMARY KEY,
   name TEXT UNIQUE NOT NULL,
   password TEXT,
   auth_type TEXT,
   token TEXT
 );
 
-CREATE TABLE IF NOT EXISTS entries (
-  entry_id INT PRIMARY KEY,
-  song_id INT NOT NULL,
-  part_id INT NOT NULL,
-  user_id INT NOT NULL
+CREATE TABLE IF NOT EXISTS logs (
+  log_id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  action TEXT NOT NULL,
+  target_id INTEGER NOT NULL,
+  timestamp TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS messages (
+  message_id INTEGER PRIMARY KEY,
+  user_id INTEGER NOT NULL,
+  message TEXT NOT NULL,
+  song_id INTEGER NOT NULL,
+  status TEXT NOT NULL,
+  timestamp TEXT DEFAULT CURRENT_TIMESTAMP
+);
 

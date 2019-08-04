@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <title>エントリーリスト</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <link rel="stylesheet" href="index.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.2/css/bootstrap.min.css" integrity="sha384-Smlep5jCw/wG7hdkwQ/Z5nLIefveQRIY9nfy6xoR1uRYBtpZgI6339F5dgvm/e9B" crossorigin="anonymous">
+
+    <script type="text/x-template" id="new-song-dialog-template">
+      <div class="modal" :class="{show: status.onSongAdd}" tabindex="-1" role="dialog" @click="hide()">
+        <div class="modal-dialog" role="document" @click.stop="">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">曲の追加</h5>
+              <button type="button"  @click="hide()" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <div class="form-group">
+                <label for="new-song-name">曲名</label>
+                <small id="new-song-name-help" class="form-text text-muted">追加したい曲名を入力（必須）</small>
+                <input type="input" class="form-control" id="new-song-name" aria-describedby="new-song-name-help" placeholder="曲名" v-model="title">
+              </div>
+              
+              <div class="form-group">
+                <label for="new-song-ref">出典</label>
+                <small id="new-song-ref-help" class="form-text text-muted">曲の出典（アーティスト名、アルバム名など）を入力（必須）</small>
+                <input type="input" class="form-control" id="new-song-ref" aria-describedby="new-song-name-help" placeholder="出典" v-model="reference">
+              </div>
+              
+              <div class="form-group">
+                <label for="new-song-url">参考URL</label>
+                <small id="new-song-url-help" class="form-text text-muted">参考URLを入力</small>
+                <input type="input" class="form-control" id="new-song-url" aria-describedby="new-song-url-help" placeholder="URL" v-model="url">
+              </div>
+              
+              <div class="form-group">
+                <p>募集パート</p>
+                <small id="new-song-url-help" class="form-text text-muted">募集したいパートをそれぞれ入力</small>
+
+                <div class="form-group form-row" v-for="part in parts">
+                  <div class="col">
+                    <input type="input" class="form-control" aria-describedby="new-song-url-help" placeholder="パート" v-model="part.name">
+                  </div>
+                  <div class="col">
+                    <button type="button" class="btn btn-danger" @click="deletePart(part)">削除</button>
+                  </div>
+                </div>
+                
+                <button type="button" class="btn btn-info" @click="addPart">入力欄を追加</button>
+              </div>
+                
+              <div class="form-group">
+                <label for="new-song-author">リクエスト者名</label>
+                <small id="new-song-author-help" class="form-text text-muted">リクエスト主を入力（必須）</small>
+                <input type="input" class="form-control" id="new-song-author" aria-describedby="new-song-ref-help" placeholder="あなたのお名前" v-model="author">
+              </div>
+
+              <div class="form-group">
+                <label for="new-song-author">コメント</label>
+                <small id="new-song-author-help" class="form-text text-muted">注意点や指示、コメントなどを入力</small>
+                <textarea class="form-control" id="new-song-comment" aria-describedby="new-song-comment-help" placeholder="コメント" v-model="comment"></textarea>
+              </div>
+              
+              <div class="alert alert-warning" v-show="message.length">
+                エラー：
+                <span v-if="message == 'no_title'">曲名を入力してください</span>
+                <span v-else-if="message == 'no_reference'">出典を入力してください</span>
+                <span v-else-if="message == 'no_parts'">募集パートを入力してください</span>
+                <span v-else-if="message == 'no_author'">リクエスト者名を入力してください</span>
+                <span v-else-if="message == 'blank_part_exists'">空の募集パート入力欄があります</span>
+                <span v-else-if="message == 'request_error'">リクエストの送信に失敗しました</span>
+                <span v-else-if="message == 'duplicated_title'">この曲名と出典の組み合わせはすでに登録済みです</span>
+                <span v-else-if="message == 'server_error'">サーバー側でエラーが発生しました</span>
+                <span v-else-if="message == 'invalid_url'">無効なURLです</span>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <img src="/loading.gif" v-show="busy">
+              <button @click="hide()" type="button" class="btn btn-secondary" data-dismiss="modal">閉じる</button>
+              <button type="button" class="btn btn-primary" @click="apply">この内容で追加</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </script>
+    
+    <script type="text/x-template" id="song-list-template">
+      <div class="song-list-wrap">
+        <table class="song-list table table-hover table-bordered">
+          <thead>
+            <tr>
+              <th>曲情報</th>
+              <th>募集パート</th>
+            </tr>
+          </thead>
+          <tbody class="songs">
+            <tr class="song" v-for="song in songs">
+              <td class="song-info">
+                <div><span v-text="song.title"></span></div>
+                <div>出典：<span class="song-name" v-text="song.reference"></span></div>
+                <div>追加日時：<span class="song-name" v-text="song.update_time"></span></div>
+                <div>URL:<span class="song-name" v-text="song.url"></span></div>
+                <div>コメント：<span class="song-name" v-text="song.comment"></span></div>
+              </td>
+              <td>
+                <table class="table-borderless">
+                  <tr>
+                    <td class="part" v-for="part in song.parts" v-text="part.name"></td>
+                  </tr>
+                  <tr>
+                    <td class="entry" v-for="part in song.parts" v-text="part.entry_name"></td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+          </tbody><!-- .songs -->
+        </table>
+      </div>
+    </script><!-- end of "song-list-template" -->
+
+  </head>
+  <body>
+    <div id="main-frame">
+
+      <header class="event-selector jumbotron">
+        <h1>エントリーリスト</h1>
+      </header>
+
+      <div class="song-list-wrap">
+        <song-list :songs="songs"></song-list>
+      </div>
+
+      <div class="actions text-center">
+        <div class="form-group">
+          <button type="button" class="btn btn-primary" @click="status.onSongAdd = !status.onSongAdd">曲を追加する</button>
+        </div>
+      </div>
+
+      <footer class="footer">
+        <div>
+          generated by <a href="https://github.com/mesotokyo/entry-asp">entry-asp</a>
+        </div>
+      </footer>
+
+      <new-song-dialog :status="status" @request-done="updateSongList"></new-song-dialog>
+
+    </div><!-- #main-frame -->
+
+    <script src="index.js"></script>
+  </body>
+</html>

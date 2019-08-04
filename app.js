@@ -5,6 +5,7 @@ const http = require('http');
 const bodyParser = require('body-parser');
 const routes = require('./routes/routes');
 const app = connect();
+const serveStatic = require('serve-static')
 
 // use json parser
 app.use(bodyParser.json({ type: 'application/json' }));
@@ -16,9 +17,13 @@ app.use(require('morgan')('common'));
 // use response
 app.use(require('./middleware/response'));
 
-// /api/create_song
+// /api
 app.use(routes);
 
+// static files
+
+app.use(serveStatic('./public', { index: "index.html" }));
+        
 // respond to all requests
 app.use(function(req, res){
   res.end('Hello from Connect!\n');

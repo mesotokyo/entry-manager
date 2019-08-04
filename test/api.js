@@ -28,18 +28,16 @@ function jsonRequest(path, postData, callback) {
       });
       res.on('end', () => {
         let result;
+        // console.error(data);
         try {
-          //console.log(data);
           result = JSON.parse(data);
         }
         catch (err) {
-          console.error(data);
           reject(err + "data: " + data);
           return;
         }
-
         if (result.error) {
-          reject(result.error.message);
+          reject(result.error.message || result.error.code);
         } else {
           resolve(result);
         }
@@ -60,6 +58,8 @@ describe('createSong', function () {
         reference: "ほげほげ",
         url: "http://example.com",
         comment: "テストのコメント",
+        author: "ほげ",
+        parts: ["foo1", "bar2", "hoge3"]
       },
     };
     return jsonRequest("/api/", data).should.be.fulfilled
@@ -73,4 +73,85 @@ describe('createSong', function () {
                })
       .have.property('song_id').with.not.equal(0);
   });
+
+  it('should fail when create duplicated entry', function () {
+    const data = {
+      method: "createSong",
+      params: {
+        title: "テストタイトル",
+        reference: "ほげほげ",
+        url: "http://example.com/foo",
+        comment: "テストのコメント2",
+        author: "ほげほげ",
+        parts: ["foo1",]
+      },
+    };
+    return jsonRequest("/api/", data).should.be.rejected;
+  });
+
+  it('should fail when create invalid URL', function () {
+    const data = {
+      method: "createSong",
+      params: {
+        title: "テストタイトル",
+        reference: "ほげほげ2",
+        url: "script>foo",
+        comment: "テストのコメント2",
+        author: "ほげほげ",
+        parts: ["foo1",]
+      },
+    };
+    return jsonRequest("/api/", data).should.be.rejected;
+  });
+
+  it('should ok when create duplicated title', function () {
+    const data = {
+      method: "createSong",
+      params: {
+        title: "テストタイトル",
+        reference: "ほげほげ2",
+        url: "http://example.com/foo",
+        comment: "テストのコメント3",
+        author: "ほげほげ",
+        parts: ["foo1", "bar2", "hoge3"]
+      },
+    };
+    return jsonRequest("/api/", data).should.be.fulfilled;
+  });
 });
+
+describe('listSongs', function () {
+  it('should return result', function () {
+    const data = {
+      method: "listSongs",
+    };
+    return jsonRequest("/api/", data).should.be.fulfilled
+      .and.should.eventually
+      .have.property('result')
+      .with.have.property('songs')
+      .with.have.property('0').with.have.property('parts')
+      .with.have.lengthOf.at.least(1);
+  });
+});
+
+describe('entry', function () {
+  it('should return result', function () {
+    const data = {
+      method: "entry",
+      params: {
+        song_id: 1,
+        part_id: 1,
+        name: "ほげほげ"
+      },
+    };
+    return jsonRequest("/api/", data).should.be.fulfilled
+      .and.should.eventually
+      .have.property('result')
+      .with.have.property('entry')
+      .have.all.keys("entry_id",
+                     "song_id",
+                     "user_id",
+                     "part_id");
+  });
+});
+
