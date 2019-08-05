@@ -55,11 +55,11 @@ describe('createSong', function () {
       method: "createSong",
       params: {
         title: "テストタイトル",
-        reference: "ほげほげ",
+        reference: "出典の名前",
         url: "http://example.com",
         comment: "テストのコメント",
         author: "ほげ",
-        parts: ["foo1", "bar2", "hoge3"]
+        parts: ["ボーカル", "ギター", "ドラム"]
       },
     };
     return jsonRequest("/api/", data).should.be.fulfilled
@@ -67,9 +67,10 @@ describe('createSong', function () {
       .have.property('result')
       .have.property('song')
       .include({title: data.params.title,
+                reference: data.params.reference,
                 url: data.params.url,
                 comment: data.params.comment,
-                reference: data.params.reference,
+                author: data.params.author
                })
       .have.property('song_id').with.not.equal(0);
   });
@@ -79,7 +80,7 @@ describe('createSong', function () {
       method: "createSong",
       params: {
         title: "テストタイトル",
-        reference: "ほげほげ",
+        reference: "出典の名前",
         url: "http://example.com/foo",
         comment: "テストのコメント2",
         author: "ほげほげ",
@@ -94,7 +95,7 @@ describe('createSong', function () {
       method: "createSong",
       params: {
         title: "テストタイトル",
-        reference: "ほげほげ2",
+        reference: "違う出典",
         url: "script>foo",
         comment: "テストのコメント2",
         author: "ほげほげ",
@@ -109,11 +110,11 @@ describe('createSong', function () {
       method: "createSong",
       params: {
         title: "テストタイトル",
-        reference: "ほげほげ2",
+        reference: "違う出典",
         url: "http://example.com/foo",
         comment: "テストのコメント3",
         author: "ほげほげ",
-        parts: ["foo1",]
+        parts: ["ボーカル",]
       },
     };
     return jsonRequest("/api/", data).should.be.fulfilled;
@@ -195,7 +196,7 @@ describe('listSongs', function () {
       .with.have.property('1')
       .include({song_id: 1,
                 part_id: 2,
-                name: "bar2",
+                name: "ギター",
                 entry_name: "ほげほげ",
                 instrument_name: "楽器"});
   });

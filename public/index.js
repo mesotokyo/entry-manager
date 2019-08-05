@@ -31,8 +31,35 @@ Vue.component('song-list', {
     songs: Array,
   },
   methods: {
-    entry: function(song, part) {
+    entry: function (song, part) {
       this.$emit("entry", song, part);
+    },
+    showDetails: function (song) {
+      this.$emit("show-details", song);
+    },
+  }
+});
+
+Vue.component('song-details-dialog', {
+  template: '#song-details-dialog-template',
+  data: function () {
+    return { busy: false,
+             locked: false,
+             succeed: false,
+             comment: "",
+             author: "",
+           };
+  },
+  props: { status: Object },
+  methods: {
+    hide: function () {
+      this.status.onDetails = false;
+      if (this.succeed) {
+        this.succeed = false;
+        this.locked = false;
+      }
+    },
+    apply: function () {
     },
   }
 });
@@ -60,8 +87,8 @@ Vue.component('new-entry-dialog', {
     apply: function() {
       // check parts
       var data = {
-        song_id: this.status.entryTarget.song.song_id,
-        part_id: this.status.entryTarget.part.part_id,
+        song_id: this.status.target.song.song_id,
+        part_id: this.status.target.part.part_id,
         name: this.name,
         inst_name: this.instName
       };
@@ -200,8 +227,9 @@ var app = new Vue({
     status: {
       onSongAdd: false,
       onEntry: false,
-      entryTarget: { part: {},
-                     song: {} },
+      onDetails: false,
+      target: { part: {},
+                song: {} },
     },
     songs: [],
     error: "",
@@ -222,11 +250,13 @@ var app = new Vue({
     },
     entry: function (song, part) {
       this.status.onEntry = true;
-      console.log(part);
-      console.log(song);
-      this.status.entryTarget.part = part;
-      this.status.entryTarget.song = song;
+      this.status.target.part = part;
+      this.status.target.song = song;
     },
+    showDetails: function (song) {
+      this.status.onDetails = true;
+      this.status.target.song = song;
+    }
   },
   created: function created() {
     this.updateSongList();

@@ -116,7 +116,8 @@ function createSong(req, res, next) {
                                   url: params.url,
                                   comment: params.comment,
                                   song_id: songId,
-                                  user_id: params.user_id
+                                  user_id: params.user_id,
+                                  author: params.author,
                                 }
                         }
                });

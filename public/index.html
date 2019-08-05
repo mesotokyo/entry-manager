@@ -3,12 +3,13 @@
   <head>
     <title>エントリーリスト</title>
     <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <link rel="stylesheet" href="index.css">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.2/css/bootstrap.min.css" integrity="sha384-Smlep5jCw/wG7hdkwQ/Z5nLIefveQRIY9nfy6xoR1uRYBtpZgI6339F5dgvm/e9B" crossorigin="anonymous">
 
 
     <script type="text/x-template" id="new-song-dialog-template">
-      <div class="modal" :class="{show: status.onSongAdd}" tabindex="-1" role="dialog" @click="hide()">
+      <div v-if="status.onSongAdd" class="modal" :class="{show: status.onSongAdd}" tabindex="-1" role="dialog" @click="hide()">
         <div class="modal-dialog" role="document" @click.stop="">
           <div class="modal-content">
             <div class="modal-header">
@@ -90,7 +91,7 @@
 
     
     <script type="text/x-template" id="new-entry-dialog-template">
-      <div class="modal" :class="{show: status.onEntry}" tabindex="-1" role="dialog" @click="hide()">
+      <div v-if="status.onEntry" class="modal" :class="{show: status.onEntry}" tabindex="-1" role="dialog" @click="hide()">
         <div class="modal-dialog" role="document" @click.stop="">
           <div class="modal-content">
             <div class="modal-header">
@@ -100,9 +101,9 @@
               </button>
             </div>
             <div class="modal-body">
-              <p>曲名：<span class="font-weight-bold" v-text="status.entryTarget.song.title"></span></p>
-              <p>出典：<span class="font-weight-bold" v-text="status.entryTarget.song.reference"></span></p>
-              <p>パート：<span class="font-weight-bold" v-text="status.entryTarget.part.name"></span></p>
+              <p>曲名：<span class="font-weight-bold" v-text="status.target.song.title"></span></p>
+              <p>出典：<span class="font-weight-bold" v-text="status.target.song.reference"></span></p>
+              <p>パート：<span class="font-weight-bold" v-text="status.target.part.name"></span></p>
               
               <div class="form-group">
                 <label for="new-entry-name">名前：</label>
@@ -135,6 +136,82 @@
       </div>
     </script>
 
+    <script type="text/x-template" id="song-details-dialog-template">
+      <div v-if="status.onDetails" class="modal" :class="{show: status.onDetails}" tabindex="-1" role="dialog" @click="hide()">
+        <div class="modal-dialog" role="document" @click.stop="">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title">楽曲詳細とコメント</h5>
+              <button type="button"  @click="hide()" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <p>曲名：<span class="font-weight-bold" v-text="status.target.song.title"></span></p>
+              <p>出典：<span class="font-weight-bold" v-text="status.target.song.reference"></span></p>
+              <p>リクエスト主：<span class="font-weight-bold" v-text="status.target.song.author"></span></p>
+              <p>追加日時：<span class="font-weight-bold" v-text="status.target.song.create_time"></span></p>
+              <p>URL：<span class="font-weight-bold" v-text="status.target.song.url"></span></p>
+              <p>募集パートとエントリー状況：</p>
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>パート</th>
+                    <th>プレイヤー名</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr v-for="part in status.target.song.parts">
+                    <td v-text="part.name"></td>
+                    <td v-text="part.entry_name"></td>
+                    <td>
+                      <button type="button" class="btn btn-outline-danger btn-sm" @click="">エントリーを取り消す</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+              <p>コメント：</p>
+              <div class="form-group">
+                <div class="list-group">
+                  <div class="list-group-item">
+                    <div>
+                      <h6>
+                        <span class="font-weight-bold" v-text="status.target.song.author"></span>
+                        <small class="sm text-muted">
+                          （<span v-text="status.target.song.create_time"></span>）                      </small>：
+                      </h6>
+                    </div>
+                    <p class="mb-1" v-text="status.target.song.comment"></p>
+                  </div>
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="new-song-author">お名前：</label>
+                <small id="new-song-author-help" class="form-text text-muted">投稿者名（必須）</small>
+                <input type="input" class="form-control" id="new-song-author" aria-describedby="new-song-ref-help" placeholder="あなたのお名前" v-model="author">
+              </div>
+
+              <div class="form-group">
+                <label for="new-song-author">コメント：</label>
+                <small id="new-song-author-help" class="form-text text-muted">コメントを入力</small>
+                <textarea class="form-control" id="new-song-comment" aria-describedby="new-song-comment-help" placeholder="コメント" v-model="comment"></textarea>
+              </div>
+
+              <div class="form-group">
+                <button type="button" :disabled="locked" class="btn btn-primary" @click="apply">コメントを追加</button>
+              </div>
+            </div>
+
+            <div class="modal-footer">
+              <img src="/loading.gif" v-show="busy">
+              <button @click="hide()" type="button" class="btn btn-secondary" data-dismiss="modal">閉じる</button>
+              <button type="button" :disabled="locked" class="btn btn-primary" @click="apply">曲情報を編集</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </script>
 
 
     <script type="text/x-template" id="song-list-template">
@@ -154,6 +231,8 @@
                 <div>追加日時：<span class="song-name" v-text="song.update_time"></span></div>
                 <div>URL:<span class="song-name" v-text="song.url"></span></div>
                 <div>コメント：<span class="song-name" v-text="song.comment"></span></div>
+                <button type="button" class="btn btn-outline-info btn-sm" @click="showDetails(song)">詳細やコメントを表示</button>
+                
               </td>
               <td>
                 <dl class="entry-list">
@@ -181,7 +260,10 @@
       </header>
 
       <div class="song-list-wrap">
-        <song-list :songs="songs" @entry="entry"></song-list>
+        <song-list :songs="songs"
+                   @entry="entry"
+                   @show-details="showDetails">
+        </song-list>
       </div>
 
       <div class="actions text-center">
@@ -196,6 +278,9 @@
         </div>
       </footer>
 
+      <song-details-dialog :status="status"
+                       @request-done="updateSongList">
+      </song-details-dialog>
       <new-song-dialog :status="status"
                        @request-done="updateSongList">
       </new-song-dialog>

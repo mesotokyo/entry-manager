@@ -241,7 +241,9 @@ exports.createSong = function createSong(params) {
 exports.getSongs = function getSongs() {
   return new Promise((resolve, reject) => {
     const db = this.connect();
-    let stmt = db.prepare('SELECT * FROM songs ORDER BY song_id ASC');
+    let stmt = db.prepare('SELECT songs.*, users.name AS author FROM songs' +
+                          '  LEFT JOIN users USING(user_id)' +
+                          '  ORDER BY song_id ASC');
     let songs;
     this.runStatementAll(stmt)
       .then(rows => {
