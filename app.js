@@ -5,7 +5,7 @@ const http = require('http');
 const bodyParser = require('body-parser');
 const routes = require('./routes/routes');
 const app = connect();
-const serveStatic = require('serve-static')
+const serveStatic = require('serve-static');
 
 // use json parser
 app.use(bodyParser.json({ type: 'application/json' }));
@@ -16,6 +16,9 @@ app.use(require('morgan')('common'));
 
 // use response
 app.use(require('./middleware/response'));
+
+// use token auth
+app.use(require('./middleware/token-auth')(config));
 
 // /api
 app.use(routes);

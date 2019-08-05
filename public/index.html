@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="index.css">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.2/css/bootstrap.min.css" integrity="sha384-Smlep5jCw/wG7hdkwQ/Z5nLIefveQRIY9nfy6xoR1uRYBtpZgI6339F5dgvm/e9B" crossorigin="anonymous">
 
+    <script>var entryConfig={token:"0644d25c7f4c0ebf"};</script>
 
     <script type="text/x-template" id="new-song-dialog-template">
       <div v-if="status.onSongAdd" class="modal" :class="{show: status.onSongAdd}" tabindex="-1" role="dialog" @click="hide()">
@@ -267,6 +268,10 @@
       </div>
 
       <div class="actions text-center">
+        <div class="alert alert-warning" v-if="error">
+          <span v-if="error == 'invalid_token'">不正なアクセストークンです。再読み込みするか、URLをご確認ください。</span>
+          <span v-else>読み込みエラーです。</span>
+        </div>
         <div class="form-group">
           <button type="button" class="btn btn-primary" @click="status.onSongAdd = !status.onSongAdd">曲を追加する</button>
         </div>

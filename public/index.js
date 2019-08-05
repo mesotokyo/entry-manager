@@ -20,6 +20,7 @@ function sendRequest(method, params, callback) {
   xhr.responseType = 'json';
   xhr.open('POST', '/api/');
   xhr.setRequestHeader("Content-Type", "application/json");
+  params.token = (entryConfig || {}).token || "";
   var data = JSON.stringify({method: method,
                              params: params});
   xhr.send(data);
@@ -238,7 +239,12 @@ var app = new Vue({
     updateSongList: function () {
       // load song list
       sendRequest("listSongs", {}, (err, resp) => {
-        if (err) {
+        if (err || resp.error) {
+          console.log(resp);
+          if (resp.error && resp.error.code == -32200) {
+            this.error = "invalid_token";
+            return;
+          }
           this.error = "list_songs_failed";
           return;
         }

@@ -6,12 +6,13 @@ function routes(req, res, next) {
   const parsedUrl = url.parse(req.url);
 
   if (parsedUrl.pathname == '/api/') {
-    return apiEndPoint(req, res, next);
+    apiEndPoint(req, res, next);
+    return;
   }
   if (parsedUrl.pathname == '/') {
   }
-
-  return next();
+  next();
+  return;
 }
 
 function apiEndPoint(req, res, next) {
