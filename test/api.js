@@ -113,24 +113,10 @@ describe('createSong', function () {
         url: "http://example.com/foo",
         comment: "テストのコメント3",
         author: "ほげほげ",
-        parts: ["foo1", "bar2", "hoge3"]
+        parts: ["foo1",]
       },
     };
     return jsonRequest("/api/", data).should.be.fulfilled;
-  });
-});
-
-describe('listSongs', function () {
-  it('should return result', function () {
-    const data = {
-      method: "listSongs",
-    };
-    return jsonRequest("/api/", data).should.be.fulfilled
-      .and.should.eventually
-      .have.property('result')
-      .with.have.property('songs')
-      .with.have.property('0').with.have.property('parts')
-      .with.have.lengthOf.at.least(1);
   });
 });
 
@@ -148,10 +134,70 @@ describe('entry', function () {
       .and.should.eventually
       .have.property('result')
       .with.have.property('entry')
-      .have.all.keys("entry_id",
-                     "song_id",
+      .have.all.keys("song_id",
                      "user_id",
                      "part_id");
+  });
+  it('should fail when entry to entried part', function () {
+    const data = {
+      method: "entry",
+      params: {
+        song_id: 1,
+        part_id: 1,
+        name: "もげもげ"
+      },
+    };
+    return jsonRequest("/api/", data).should.be.rejected;
+  });
+  it('should return result with instrument name', function () {
+    const data = {
+      method: "entry",
+      params: {
+        song_id: 1,
+        part_id: 2,
+        name: "ほげほげ",
+        instrument_name: "楽器"
+      },
+    };
+    return jsonRequest("/api/", data).should.be.fulfilled
+      .and.should.eventually
+      .have.property('result')
+      .with.have.property('entry')
+      .have.all.keys("song_id",
+                     "user_id",
+                     "part_id",
+                     "instrument_name")
+      .include({instrument_name: "楽器"});
+  });
+  it('should fail when entry to invalid part', function () {
+    const data = {
+      method: "entry",
+      params: {
+        song_id: 2,
+        part_id: 2,
+        name: "ほげほげ",
+      },
+    };
+    return jsonRequest("/api/", data).should.be.rejected;
+  });
+});
+
+describe('listSongs', function () {
+  it('should return result', function () {
+    const data = {
+      method: "listSongs",
+    };
+    return jsonRequest("/api/", data).should.be.fulfilled
+      .and.should.eventually
+      .have.property('result')
+      .with.have.property('songs')
+      .with.have.property('0').with.have.property('parts')
+      .with.have.property('1')
+      .include({song_id: 1,
+                part_id: 2,
+                name: "bar2",
+                entry_name: "ほげほげ",
+                instrument_name: "楽器"});
   });
 });
 

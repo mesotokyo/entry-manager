@@ -278,15 +278,16 @@ exports.getSongs = function getSongs() {
 exports.createEntry = function createEntry(params) {
   return new Promise((resolve, reject) => {
     const db = this.connect();
-    const stmt = db.prepare('UPDATE parts SET user_id = ?' +
-                            '  WHERE part_id = ?');
+    const stmt = db.prepare('UPDATE parts SET user_id = ?, instrument_name = ?' +
+                            '  WHERE part_id = ? AND user_id IS NULL');
     this.runStatement(stmt,
                       params.user_id,
+                      params.instrument_name || "",
                       params.part_id)
       .then(result => {
         stmt.finalize();
         db.close();
-        resolve(params.part_id);
+        resolve(result.changes);
       })
       .catch(err => {
         stmt.finalize();

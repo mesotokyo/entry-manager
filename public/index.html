@@ -100,8 +100,9 @@
               </button>
             </div>
             <div class="modal-body">
-              <p>曲名：<span v-text="status.entryTarget.song.title"></span></p>
-              <p>パート：<span v-text="status.entryTarget.part.name"></span></p>
+              <p>曲名：<span class="font-weight-bold" v-text="status.entryTarget.song.title"></span></p>
+              <p>出典：<span class="font-weight-bold" v-text="status.entryTarget.song.reference"></span></p>
+              <p>パート：<span class="font-weight-bold" v-text="status.entryTarget.part.name"></span></p>
               
               <div class="form-group">
                 <label for="new-entry-name">名前：</label>
@@ -120,11 +121,14 @@
                 <span v-if="message == 'no_name'">お名前を入力してください</span>
                 <span v-else-if="message == 'server_error'">サーバー側でエラーが発生しました</span>
               </div>
+              <div class="alert alert-info" v-show="succeed">
+                エントリーが完了しました
+              </div>
             </div>
             <div class="modal-footer">
               <img src="/loading.gif" v-show="busy">
               <button @click="hide()" type="button" class="btn btn-secondary" data-dismiss="modal">閉じる</button>
-              <button type="button" class="btn btn-primary" @click="apply">この内容でエントリー</button>
+              <button type="button" :disabled="locked" class="btn btn-primary" @click="apply">この内容でエントリー</button>
             </div>
           </div>
         </div>
@@ -192,7 +196,9 @@
         </div>
       </footer>
 
-      <new-song-dialog :status="status" @request-done="updateSongList"></new-song-dialog>
+      <new-song-dialog :status="status"
+                       @request-done="updateSongList">
+      </new-song-dialog>
       <new-entry-dialog :status="status"
                         @request-done="updateSongList"
                         ></news-entry-dialog>

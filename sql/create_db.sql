@@ -15,7 +15,8 @@ CREATE TABLE IF NOT EXISTS parts (
   song_id INTEGER NOT NULL,
   name TEXT NOT NULL,
   `order` INTEGER NOT NULL,
-  user_id INGEGER
+  user_id INTEGER,
+  instrument_name TEXT
 );
 
 CREATE TABLE IF NOT EXISTS users (

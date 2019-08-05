@@ -43,6 +43,8 @@ Vue.component('new-entry-dialog', {
              instName: "",
              message: "",
              busy: false,
+             locked: false,
+             succeed: false,
            };
   },
   props: { status: Object },
@@ -50,8 +52,43 @@ Vue.component('new-entry-dialog', {
   methods: {
     hide: function () {
       this.status.onEntry = false;
+      if (this.succeed) {
+        this.succeed = false;
+        this.locked = false;
+      }
     },
     apply: function() {
+      // check parts
+      var data = {
+        song_id: this.status.entryTarget.song.song_id,
+        part_id: this.status.entryTarget.part.part_id,
+        name: this.name,
+        inst_name: this.instName
+      };
+
+      this.busy = true;
+      this.locked = true;
+      var vm = this;
+      sendRequest("entry", data, function (err, resp) {
+        vm.busy = false;
+        if (err) {
+          vm.message = "request_error";
+          return;
+        }
+        if (resp.error) {
+          if (resp.error.code == -32101) {
+            vm.message = "no_change";
+            return;
+          }
+          vm.message = "server_error";
+          return;
+        }
+        vm.message = "";
+        vm.succeed = true;
+        vm.$emit("request-done");
+      });
+
+      
     },
   },
 });
@@ -138,20 +175,19 @@ Vue.component('new-song-dialog', {
         vm.busy = false;
         if (err) {
           vm.message = "request_error";
+          return;
         }
-        else {
-          if (resp.error) {
-            if (resp.error.code == -32100) {
-              vm.message = "duplicated_title";
-              return;
-            }
-            vm.message = "server_error";
+        if (resp.error) {
+          if (resp.error.code == -32100) {
+            vm.message = "duplicated_title";
             return;
           }
-          vm.$emit("request-done");
-          vm.resetAll();
-          vm.hide();
+          vm.message = "server_error";
+          return;
         }
+        vm.$emit("request-done");
+        vm.resetAll();
+        vm.hide();
       });
     },
   }
@@ -163,7 +199,7 @@ var app = new Vue({
   data: {
     status: {
       onSongAdd: false,
-      onEntry: true,
+      onEntry: false,
       entryTarget: { part: {},
                      song: {} },
     },

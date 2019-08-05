@@ -42,7 +42,8 @@ function entry(req, res, next) {
   }
   if (err.length) {
     res.json({ error: { code: -32602, message: err } });
-    return next();
+    next();
+    return;
   }
 
   model.getOrCreateUser({name: params.name})
@@ -50,24 +51,27 @@ function entry(req, res, next) {
       params.user_id = user.user_id;
       return model.createEntry(params);
     })
-    .then(_entryId => {
-      entryId = _entryId;
-      return model.createLog({user_id: params.user_id,
-                              target_id: _entryId,
-                              action: "entry"});
-    })
-    .then(_logId => {
-      res.json({result: {entry: {entry_id: entryId,
-                                 song_id: params.song_id,
-                                 user_id: params.user_id,
-                                 part_id: params.part_id,
-                                }}});
+    .then(changes => {
+      if (changes == 0) {
+        res.json({error: { code: -32101, message: "no_changes" }});
+        return;
+      }
+      model.createLog({user_id: params.user_id,
+                       target_id: params.part_id,
+                       action: "entry"})
+        .then(_logId => {
+          res.json({result: {entry: {entry_id: entryId,
+                                     song_id: params.song_id,
+                                     user_id: params.user_id,
+                                     part_id: params.part_id,
+                                     instrument_name: params.instrument_name,
+                                    }}});
+        });
     })
     .catch(err => {
       res.json({ error: { code: -32603, message: err.toString()} });
     });
-  return;
-}
+};
 
 function createSong(req, res, next) {
   const params = req.body.params;
