@@ -22,6 +22,12 @@ function apiEndPoint(req, res, next) {
   else if (req.body.method == "updateSong") {
     updateSong(req, res, next);
   }
+  else if (req.body.method == "addPart") {
+    addPart(req, res, next);
+  }
+  else if (req.body.method == "deletePart") {
+    deletePart(req, res, next);
+  }
   else if (req.body.method == "listSongs") {
     listSongs(req, res, next);
   }
@@ -38,7 +44,6 @@ function apiEndPoint(req, res, next) {
     deleteEntry(req, res, next);
   } else {
     res.json({ error: { code: -32601, message: "method_not_found" } });
-    next();
   }
 }
 
@@ -156,6 +161,12 @@ function createSong(req, res, next) {
 }
 
 function updateSong(req, res, next) {
+}
+
+function addPart(req, res, next) {
+}
+
+function deletePart(req, res, next) {
 }
 
 function listSongs(req, res, next) {

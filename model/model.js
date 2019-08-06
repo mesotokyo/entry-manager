@@ -266,6 +266,117 @@ exports.updateSong = function updateSong(params) {
   });
 };
 
+exports.addPart = function addPart(params) {
+  return new Promise((resolve, reject) => {
+    // const db = this.connect();
+    let db;
+    let part;
+    let stmt;
+
+    this.transaction()
+      .then(_db => {
+        db = _db;
+        stmt = db.prepare('INSERT INTO parts ' +
+                          '  (song_id, name, order)' +
+                          '  VALUE (?, ?, ?)');
+        return this.runStatementAll(stmt,
+                                    params.song_id,
+                                    params.name,
+                                    params.order);
+      })
+      .then(result => {
+          stmt.finalize();
+          if (!result.changes) {
+            return Promise.reject(new Error("add_part_failed"));
+          }
+          stmt = db.prepare('UPDATE songs' +
+                            '  SET update_time = CURRENT_TIMESTAMP' +
+                            '  WHERE song_id = ?');
+          return this.runStatement(stmt, part.song_id);
+      })
+      .then(result => {
+        stmt.finalize();
+          if (!result.changes) {
+            return Promise.reject(new Error("update_timestamp_failed"));
+          }
+        return this.commit(db);
+      })
+      .then(
+        db => {
+          db.close();
+          resolve(1);
+        },
+        err => {
+          if (stmt) { stmt.finalize(); }
+          db.close();
+          reject(err);
+        }
+      )
+      .catch(err => {
+        if (stmt) { stmt.finalize(); }
+        this.rollback(db).finally(() => {
+          db.close();
+          reject(err);
+        });
+      });
+  });
+};
+
+exports.updatePart = function updatePart(params) {
+  return new Promise((resolve, reject) => {
+    // const db = this.connect();
+    let db;
+    let part;
+    let stmt;
+
+    this.transaction()
+      .then(_db => {
+        db = _db;
+        stmt = db.prepare('UPDATE parts ' +
+                          '  (name, order, user_id, instrument_name)' +
+                          '  VALUE (?, ?, ?, ?)' +
+                          '  WHERE part_id = ?');
+        return this.runStatementAll(stmt,
+                                    params.name,
+                                    params.order,
+                                    params.user_id,
+                                    params.instrument_name,
+                                    params.part_id);
+      })
+      .then(_db => {
+        stmt = db.prepare('UPDATE songs' +
+                          '  SET update_time = CURRENT_TIMESTAMP' +
+                          '  WHERE song_id = ?');
+        return this.runStatement(stmt, part.song_id);
+      })
+      .then(result => {
+        stmt.finalize();
+          if (!result.changes) {
+            return Promise.reject(new Error("update_timestamp_failed"));
+          }
+        return this.commit(db);
+      })
+      .then(
+        db => {
+          db.close();
+          resolve(1);
+        },
+        err => {
+          if (stmt) { stmt.finalize(); }
+          db.close();
+          reject(err);
+        }
+      )
+      .catch(err => {
+        if (stmt) { stmt.finalize(); }
+        this.rollback(db).finally(() => {
+          db.close();
+          reject(err);
+        });
+      });
+  });
+};
+
 exports.deletePart = function deletePart(params) {
   return new Promise((resolve, reject) => {
     // const db = this.connect();
@@ -328,8 +439,8 @@ exports.deletePart = function deletePart(params) {
           reject(err);
         });
       });
-
-}
+  });
+};
 
 exports.getSongs = function getSongs() {
   return new Promise((resolve, reject) => {
