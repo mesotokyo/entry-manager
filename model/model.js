@@ -238,6 +238,99 @@ exports.createSong = function createSong(params) {
   });
 };
 
+exports.updateSong = function updateSong(params) {
+  return new Promise((resolve, reject) => {
+    const db = this.connect();
+    const stmt = db.prepare('UPDATE songs' +
+                            '  (title, reference, url, comment, '+
+                            '     status, update_time)' +
+                            '  VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)' +
+                            '  WHERE song_id = ?');
+    return this.runStatement(stmt,
+                             params.title, params.reference,
+                             params.url, params.comment,
+                             params.status, params.song_id)
+      .then(result => {
+        stmt.finalize();
+        if (!result.changes) {
+          reject(new Error("song_update_failed"));
+          return;
+        }
+        resolve(result.changes);
+      })
+      .catch(err => {
+        stmt.finalize();
+        db.close();
+        reject(err);
+      });
+  });
+};
+
+exports.deletePart = function deletePart(params) {
+  return new Promise((resolve, reject) => {
+    // const db = this.connect();
+    let db;
+    let part;
+    let stmt;
+
+    this.transaction()
+      .then(_db => {
+        db = _db;
+        stmt = db.prepare('SELECT * FROM parts ' +
+                          '  WHERE part_id = ?');
+        return this.runStatementAll(stmt, params.part_id);
+      })
+      .then(parts => {
+        stmt.finalize();
+        if (parts.length == 0) {
+          return Promise.reject(new Error("no_part_exists"));
+        }
+        part = parts[0];
+        if (part.user_id) {
+          return Promise.reject(new Error("part_has_player"));
+        }
+        stmt = db.prepare('DELETE FROM parts ' +
+                          '  WHERE part_id = ?');
+        return this.runStatement(stmt, params.part_id);
+      })
+      .then(result => {
+          stmt.finalize();
+          if (!result.changes) {
+            return Promise.reject(new Error("delete_part_failed"));
+          }
+          stmt = db.prepare('UPDATE songs' +
+                            '  SET update_time = CURRENT_TIMESTAMP' +
+                            '  WHERE song_id = ?');
+          return this.runStatement(stmt, part.song_id);
+      })
+      .then(result => {
+        stmt.finalize();
+          if (!result.changes) {
+            return Promise.reject(new Error("update_timestamp_failed"));
+          }
+        return this.commit(db);
+      })
+      .then(
+        db => {
+          db.close();
+          resolve(1);
+        },
+        err => {
+          if (stmt) { stmt.finalize(); }
+          db.close();
+          reject(err);
+        }
+      )
+      .catch(err => {
+        if (stmt) { stmt.finalize(); }
+        this.rollback(db).finally(() => {
+          db.close();
+          reject(err);
+        });
+      });
+
+}
+
 exports.getSongs = function getSongs() {
   return new Promise((resolve, reject) => {
     const db = this.connect();
@@ -290,6 +383,83 @@ exports.createEntry = function createEntry(params) {
         stmt.finalize();
         db.close();
         resolve(result.changes);
+      })
+      .catch(err => {
+        stmt.finalize();
+        db.close();
+        reject(err);
+      });
+  });
+};
+
+exports.deleteEntry = function deleteEntry(params) {
+  return new Promise((resolve, reject) => {
+    const db = this.connect();
+    const stmt = db.prepare('UPDATE parts ' +
+                            'SET user_id = NULL, instrument_name = NULL' +
+                            '  WHERE part_id = ?');
+    this.runStatement(stmt,
+                      params.user_id,
+                      params.instrument_name || "",
+                      params.part_id)
+      .then(result => {
+        stmt.finalize();
+        db.close();
+        resolve(result.changes);
+      })
+      .catch(err => {
+        stmt.finalize();
+        db.close();
+        reject(err);
+      });
+  });
+};
+
+exports.createComment = function createComment(params) {
+  return new Promise((resolve, reject) => {
+    const db = this.connect();
+    const stmt = db.prepare('INSERT INTO comments' +
+                            '         (user_id, comment, song_id)' +
+                            '  VALUES (?, ?, ?)');
+    this.runStatement(stmt,
+                      params.user_id,
+                      params.comment,
+                      params.song_id).then(
+      result => {
+        stmt.finalize();
+        db.close();
+        if (!result.lastID) {
+          reject(new Error("comment_create_failed"));
+          return;
+        }
+        resolve(result.lastID);
+        return;
+      })
+      .catch(err => {
+        stmt.finalize();
+        db.close();
+        reject(err);
+      });
+  });
+};
+
+exports.deleteComment = function deleteComment(params) {
+  return new Promise((resolve, reject) => {
+    const db = this.connect();
+    const stmt = db.prepare('UPDATE comments' +
+                            '  SET status = "deleted",' +
+                            '      update_time = CURRENT_TIMESTAMP' +
+                            '  WHERE comment_id = ?');
+    this.runStatement(stmt, params.comment_d).then(
+      result => {
+        stmt.finalize();
+        db.close();
+        if (!result.changes) {
+          reject(new Error("comment_delete_failed"));
+          return;
+        }
+        resolve(result.changes);
+        return;
       })
       .catch(err => {
         stmt.finalize();

@@ -97,7 +97,7 @@ Vue.component('new-entry-dialog', {
       this.busy = true;
       this.locked = true;
       var vm = this;
-      sendRequest("entry", data, function (err, resp) {
+      sendRequest("createEntry", data, function (err, resp) {
         vm.busy = false;
         if (err) {
           vm.message = "request_error";

@@ -119,14 +119,49 @@ describe('createSong', function () {
     };
     return jsonRequest("/api/", data).should.be.fulfilled;
   });
+
+});
+
+describe('updateSong', function () {
+  it('should succeeds', function () {
+    const data = {
+      method: "updateSong",
+      params: {
+        song_id: 1,
+        name: "更新後のタイトル",
+        reference: "出典2",
+        url: "http://example.com/foo",
+        comment: "更新後のコメント"
+      },
+    };
+    return jsonRequest("/api/", data).should.be.fulfilled
+      .and.should.eventually
+      .have.property('result')
+      .with.have.property('changes')
+      .equal(1);
+  });
+
+  it('should succeed but no changes when duplicate values', function () {
+    const data = {
+      method: "updateSong",
+      params: {
+        song_id: 2,
+        reference: "出典の名前",
+      },
+    };
+    return jsonRequest("/api/", data).should.be.rejected
+      .and.should.eventually
+      .have.property('error')
+      .with.have.property('message')
+      .equal("duplicated_name");
+  });
 });
 
 describe('entry', function () {
   it('should return result', function () {
     const data = {
-      method: "entry",
+      method: "createEntry",
       params: {
-        song_id: 1,
         part_id: 1,
         name: "ほげほげ"
       },
@@ -141,9 +176,8 @@ describe('entry', function () {
   });
   it('should fail when entry to entried part', function () {
     const data = {
-      method: "entry",
+      method: "createEntry",
       params: {
-        song_id: 1,
         part_id: 1,
         name: "もげもげ"
       },
@@ -152,9 +186,8 @@ describe('entry', function () {
   });
   it('should return result with instrument name', function () {
     const data = {
-      method: "entry",
+      method: "createEntry",
       params: {
-        song_id: 1,
         part_id: 2,
         name: "ほげほげ",
         instrument_name: "楽器"
@@ -172,11 +205,35 @@ describe('entry', function () {
   });
   it('should fail when entry to invalid part', function () {
     const data = {
-      method: "entry",
+      method: "createEntry",
       params: {
-        song_id: 2,
-        part_id: 2,
+        part_id: 10,
         name: "ほげほげ",
+      },
+    };
+    return jsonRequest("/api/", data).should.be.rejected;
+  });
+});
+
+describe('deleteEntry', function () {
+  it('should succeed', function () {
+    const data = {
+      method: "deleteEntry",
+      params: {
+        part_id: 3,
+      },
+    };
+    return jsonRequest("/api/", data).should.be.fulfilled
+      .and.should.eventually
+      .have.property('result')
+      .with.have.property('changes')
+      .equal(1);
+  });
+  it('should fail when the part already entried', function () {
+    const data = {
+      method: "deleteEntry",
+      params: {
+        part_id: 2,
       },
     };
     return jsonRequest("/api/", data).should.be.rejected;

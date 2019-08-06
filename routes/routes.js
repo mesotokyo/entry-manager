@@ -19,18 +19,30 @@ function apiEndPoint(req, res, next) {
   if (req.body.method == "createSong") {
     createSong(req, res, next);
   }
+  else if (req.body.method == "updateSong") {
+    updateSong(req, res, next);
+  }
   else if (req.body.method == "listSongs") {
     listSongs(req, res, next);
   }
-  else if (req.body.method == "entry") {
-    entry(req, res, next);
+  else if (req.body.method == "createEntry") {
+    createEntry(req, res, next);
+  }
+  else if (req.body.method == "createComment") {
+    createComment(req, res, next);
+  }
+  else if (req.body.method == "deleteComment") {
+    deleteComment(req, res, next);
+  }
+  else if (req.body.method == "deleteEntry") {
+    deleteEntry(req, res, next);
   } else {
     res.json({ error: { code: -32601, message: "method_not_found" } });
     next();
   }
 }
 
-function entry(req, res, next) {
+function createEntry(req, res, next) {
   const params = req.body.params || {};
   let err = "";
   let entryId;
@@ -74,6 +86,15 @@ function entry(req, res, next) {
     });
 };
 
+function deleteEntry(req, res, next) {
+}
+
+function createComment(req, res, next) {
+}
+
+function deleteComment(req, res, next) {
+}
+
 function createSong(req, res, next) {
   const params = req.body.params;
   let err = "";
@@ -97,7 +118,7 @@ function createSong(req, res, next) {
 
   if (err.length) {
     res.json({ error: { code: -32602, message: err } });
-    return next();
+    return;
   }
 
   model.getOrCreateUser({name: params.author})
@@ -132,6 +153,9 @@ function createSong(req, res, next) {
       res.json({ error: { code: -32603, message: err.toString()}});
     });
   return;
+}
+
+function updateSong(req, res, next) {
 }
 
 function listSongs(req, res, next) {

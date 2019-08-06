@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS songs (
   comment TEXT,
   create_time TEXT DEFAULT CURRENT_TIMESTAMP,
   update_time TEXT DEFAULT CURRENT_TIMESTAMP,
+  status TEXT,
   UNIQUE(title, reference)
 );
 
@@ -35,12 +36,13 @@ CREATE TABLE IF NOT EXISTS logs (
   timestamp TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE TABLE IF NOT EXISTS messages (
-  message_id INTEGER PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS comments (
+  comment_id INTEGER PRIMARY KEY,
   user_id INTEGER NOT NULL,
-  message TEXT NOT NULL,
+  comment TEXT NOT NULL,
   song_id INTEGER NOT NULL,
-  status TEXT NOT NULL,
-  timestamp TEXT DEFAULT CURRENT_TIMESTAMP
+  status TEXT,
+  create_time TEXT DEFAULT CURRENT_TIMESTAMP,
+  update_time TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
