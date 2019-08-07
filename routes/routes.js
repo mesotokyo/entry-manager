@@ -92,18 +92,91 @@ function createEntry(req, res, next) {
 };
 
 function deleteEntry(req, res, next) {
+  const params = req.body.params || {};
+
+  // check params
+  if (!params.part_id) {
+    res.json({ error: { code: -32602, message: "no_part_id"} });
+    return;
+  }
+
+  // get entry
+
+  model.deleteEntry(params)
+    .then(changes => {
+      if (!changes) {
+        res.json({ error: { code: -32200, message: "no_part_id" } });
+        return;
+      }
+      return model.createLog({user_id: params.user_id,
+                              target_id: _commentId,
+                              action: "create_comment"});
+      res.json({ result: { changes: changes } });
+    })
+    .then(_commentId => {
+      params.comment_id = _commentId;
+      return model.createLog({user_id: params.user_id,
+                              target_id: _commentId,
+                              action: "create_comment"});
+    })
+    .catch(err => {
+      if (err.code && err.code === 'SQLITE_CONSTRAINT') {
+        res.json({ error: { code: -32100, message: "SQLITE_CONSTRAINT" } });
+        return;
+      }
+      res.json({ error: { code: -32603, message: err.toString()}});
+    });
+  return;
 }
 
 function createComment(req, res, next) {
+  const params = req.body.params || {};
+  let err = "";
+
+  // check params
+  for (var k of ["comment", "song_id", "author"]) {
+    if (params[k] === undefined || params[k].length == 0) {
+      err = "no_" + k;
+    }
+  }
+
+  if (err.length) {
+    res.json({ error: { code: -32602, message: err } });
+    return;
+  }
+
+  model.getOrCreateUser({name: params.author})
+    .then(user => {
+      params.user_id = user.user_id;
+      return model.createComment(params);
+    })
+    .then(_commentId => {
+      params.comment_id = _commentId;
+      return model.createLog({user_id: params.user_id,
+                              target_id: _commentId,
+                              action: "create_comment"});
+    })
+    .then(_logId => {
+      res.json({result: { comment: params } });
+    })
+    .catch(err => {
+      if (err.code && err.code === 'SQLITE_CONSTRAINT') {
+        res.json({ error: { code: -32100, message: "SQLITE_CONSTRAINT" } });
+        return;
+      }
+      console.error(err);
+      res.json({ error: { code: -32603, message: err.toString()}});
+    });
+  return;
 }
 
 function deleteComment(req, res, next) {
+  const params = req.body.params;
 }
 
 function createSong(req, res, next) {
   const params = req.body.params;
   let err = "";
-  let songId;
 
   // check params
   for (var k of ["title", "reference", "author", "parts"]) {
@@ -126,28 +199,20 @@ function createSong(req, res, next) {
     return;
   }
 
+  let _song;
   model.getOrCreateUser({name: params.author})
     .then(user => {
       params.user_id = user.user_id;
       return model.createSong(params);
     })
-    .then(_songId => {
-      songId = _songId;
+    .then(song => {
+      _song = song;
       return model.createLog({user_id: params.user_id,
-                              target_id: _songId,
+                              target_id: song.song_id,
                               action: "create_song"});
     })
-    .then(_logId => {
-      res.json({result: { song: { title: params.title,
-                                  reference: params.reference,
-                                  url: params.url,
-                                  comment: params.comment,
-                                  song_id: songId,
-                                  user_id: params.user_id,
-                                  author: params.author,
-                                }
-                        }
-               });
+    .then(log => {
+      res.json({result: { song: _song }});
     })
     .catch(err => {
       if (err.code && err.code === 'SQLITE_CONSTRAINT') {

@@ -1,609 +1,374 @@
-const sqlite3 = require('sqlite3');
 const config = require('../config');
-
-exports.connect = function connect() {
-  const database = config.database;
-  const db = new sqlite3.Database(database);
-  return db;
-};
-
-exports.transaction = function transaction(db) {
-  db = db || this.connect();
-  return new Promise((resolve, reject) => {
-    db.run('BEGIN TRANSACTION', function (err) {
-      if (err) {
-        db.close();
-        reject(err);
-        return;
-      }
-      resolve(db);
-    });
-  });
-};
-
-exports.commit = function commit(db) {
-  return new Promise((resolve, reject) => {
-    db.run('COMMIT', function (err) {
-      if (err) {
-        db.close();
-        reject(err);
-        return;
-      }
-      resolve(db);
-    });
-  });
-};
-
-exports.rollback = function rollback(db) {
-  return new Promise((resolve, reject) => {
-    db.run('ROLLBACK', function (err) {
-      if (err) {
-        db.close();
-        reject(err);
-        return;
-      }
-      resolve(db);
-    });
-  });
-};
-
-exports.runStatement = function runStatement(stmt) {
-  return new Promise((resolve, reject) => {
-    if (stmt == undefined) {
-      reject("no_statement");
-      return;
-    }
-    const args = Array.prototype.slice.call(arguments, 1);
-    args.push(function (err) {
-      if (err) {
-        reject(err);
-        return;
-      }
-      resolve(this);
-    });
-    stmt.run.apply(stmt, args);
-  });
-};
-
-exports.runStatementAll = function runStatementAll(stmt) {
-  return new Promise((resolve, reject) => {
-    if (stmt == undefined) {
-      reject("no_statement");
-      return;
-    }
-    const args = Array.prototype.slice.call(arguments, 1);
-    args.push(function (err, rows) {
-      if (err) { reject(err); return; }
-      resolve(rows);
-    });
-    stmt.all.apply(stmt, args);
-  });
-};
-
+const pSqlite3 = require('./promised-sqlite3');
 
 exports.getOrCreateUser = function getOrCreateUser(params) {
-  return new Promise((resolve, reject) => {
-    if (params.name === undefined || !params.name.length) {
-      reject("no_name");
-      return;
-    }
-    this.createUser(params)
-      .then(
-        () => { return this.getUser(params) },
-        () => { return this.getUser(params) }
-      )
-      .then(user => {
-        resolve(user);
-      })
-      .catch(err => {
-        reject(err);
-      });
-  });
+  if (params.name === undefined || !params.name.length) {
+    return Promise.reject("no_name");
+  }
+
+  return this.createUser(params)
+    .catch(err => {
+      return this.getUser(params);
+    });
 };
 
 exports.getUser = function getUser(params) {
-  return new Promise((resolve, reject) => {
-    const db = this.connect();
-    let stmt;
-    if (params.name) {
-      stmt = db.prepare('SELECT * FROM users WHERE name = ?');
-    }
-    if (stmt === undefined) {
-      db.close();
-      reject(new Error("no_quey_param"));
-      return;
-    }
-    stmt.get(params.name, function (err, row) {
-      stmt.finalize();
-      db.close();
-      if (err) {
-        reject(new Error(err));
-        return;
+  let _db;
+  return pSqlite3.connect(config)
+    .then(db => {
+      _db = db;
+      if (params.name) {
+        return pSqlite3.runStatementAndGet(db,
+                                           'SELECT * FROM users WHERE name = ?',
+                                           params.name);
       }
-      resolve(row);
-      return;
+      return Promise.reject("invalid_params");
+    })
+    .catch(err => {
+      return Promise.reject(err);
+    })
+    .finally(() => {
+      _db.close();
     });
-  });
 };
 
 exports.createUser = function createUser(params) {
-  return new Promise((resolve, reject) => {
-    const db = this.connect();
-    const stmt = db.prepare('INSERT INTO users (name)' +
-                            '           VALUES (?)');
-    this.runStatement(stmt, params.name).then(
-      result => {
-        stmt.finalize();
-        db.close();
-        if (!result.lastID) {
-          reject(new Error("user_create_failed"));
-          return;
-        }
-        resolve(result.lastID);
-        return;
-      })
-      .catch(err => {
-        stmt.finalize();
-        db.close();
-        reject(err);
-      });
-  });
+  let _db;
+  return pSqlite3.connect(config)
+    .then(db => {
+      _db = db;
+      const sql = 'INSERT INTO users (name) VALUES (?)';
+      return pSqlite3.runStatement(db, sql, params.name);
+    })
+    .then(result => {
+      if (!result.lastID) {
+        return Promise.reject("user_create_failed");
+      }
+      params.user_id = result.lastID;
+      return Promise.resolve(params);
+    })
+    .finally(() => {
+      _db.close();
+    });
+
 };
 
 exports.getParts = function getParts(params) {
-  return new Promise((resolve, reject) => {
-    if (params.song_id === undefined) {
-      reject("no_song_id");
-      return;
-    }
-    const db = this.connect();
-    const stmt = db.prepare('SELECT * FROM parts WHERE song_id = ?' +
-                            '  ORDER BY `order` ASC');
-    stmt.runStatementAll(params.song_id)
-      .then(rows => {
-        stmt.finalize();
-        db.close();
-        resolve(rows);
-        return;
-      })
-      .catch(err => {
-        stmt.finalize();
-        db.close();
-        reject(err);
-      });
-  });
+  if (params.song_id === undefined) {
+    return Promise.reject("no_song_id");
+  }
+
+  let _db;
+  return pSqlite3.connect(config)
+    .then(db => {
+      _db = db;
+      const sql = 'SELECT * FROM parts WHERE song_id = ?' +
+            '  ORDER BY `order` ASC';
+      return pSqlite3.runStatementAndGetAll(db, sql, params.song_id);
+    })
+    .finally(() => {
+      _db.close();
+    });
 };
 
 exports.createSong = function createSong(params) {
-  return new Promise((resolve, reject) => {
-    // const db = this.connect();
-    let db;
-    let songId;
-    let stmt;
+  let _db;
+  return pSqlite3.connect(config)
+    .then(db => {
+      _db = db;
+      return pSqlite3.transaction(db);
+    })
+    .then(db => {
+      const sql = 'INSERT INTO songs' +
+            '    (title, reference, user_id, url, comment)' +
+            '  VALUES (?, ?, ?, ?, ?)';
+      return pSqlite3.runStatement(db, sql, params.title, params.reference,
+                                   params.user_id, params.url, params.comment);
+    })
+    .then(result => {
+      if (!result.lastID) {
+        return Promise.reject("song_create_failed");
+      }
+      params.song_id = result.lastID;
 
-    this.transaction()
-      .then(_db => {
-        db = _db;
-        stmt = db.prepare('INSERT INTO songs' +
-                          '    (title, reference, url, comment, user_id)' +
-                          '  VALUES (?, ?, ?, ?, ?)');
-        return this.runStatement(stmt, params.title, params.reference,
-                                 params.url, params.comment, params.user_id);
-      })
-      .then(result => {
-        stmt.finalize();
-        if (!result.lastID) {
-          return Promise.reject(new Error("song_create_failed"));
-        }
-        songId = result.lastID;
-
-        // insert parts
-        let order = 0;
-        let inserted = 0;
-        let error_count = 0;
-        stmt = db.prepare('INSERT INTO parts (song_id, name, `order`)' +
-                          '           VALUES (?, ?, ?)');
-        const promises = [];
-        for (const name of params.parts) {
-          promises.push(this.runStatement(stmt,
-                                          songId,
-                                          name,
-                                          order));
-          order++;
-        }
-        return Promise.all(promises);
-      })
-      .then(values => {
-        stmt.finalize();
-        return this.commit(db);
-      })
-      .then(
-        (db) => {
-          db.close();
-          resolve(songId);
-        },
-        err => {
-          if (stmt) { stmt.finalize(); }
-          db.close();
-          reject(err);
-        }
-      )
-      .catch(err => {
-        if (stmt) { stmt.finalize(); }
-        this.rollback(db).finally(() => {
-          db.close();
-          reject(err);
-        });
-      });
-  });
+      // insert parts
+      let order = 0;
+      let inserted = 0;
+      let error_count = 0;
+      const sql = 'INSERT INTO parts (song_id, name, `order`)' +
+            '           VALUES (?, ?, ?)';
+      const promises = [];
+      for (const name of params.parts) {
+        promises.push(pSqlite3.runStatement(_db, sql,
+                                            params.song_id,
+                                            name, order));
+        order++;
+      }
+      return Promise.all(promises);
+    })
+    .then(values => {
+      return pSqlite3.commit(_db);
+    })
+    .then(db => {
+      return Promise.resolve(params);
+    })
+    .finally(() => {
+      _db.close();
+    });
 };
 
 exports.updateSong = function updateSong(params) {
-  return new Promise((resolve, reject) => {
-    const db = this.connect();
-    const stmt = db.prepare('UPDATE songs' +
-                            '  (title, reference, url, comment, '+
-                            '     status, update_time)' +
-                            '  VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)' +
-                            '  WHERE song_id = ?');
-    return this.runStatement(stmt,
-                             params.title, params.reference,
-                             params.url, params.comment,
-                             params.status, params.song_id)
-      .then(result => {
-        stmt.finalize();
-        if (!result.changes) {
-          reject(new Error("song_update_failed"));
-          return;
-        }
-        resolve(result.changes);
-      })
-      .catch(err => {
-        stmt.finalize();
-        db.close();
-        reject(err);
-      });
-  });
+  return pSqlite3.connect(config)
+    .then(db => {
+      const sql= 'UPDATE songs' +
+            '  (title, reference, url, comment, '+
+            '     status, update_time)' +
+            '  VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)' +
+            '  WHERE song_id = ?';
+      return pSqlite3.runStatement(db, sql,
+                               params.title, params.reference,
+                               params.url, params.comment,
+                               params.status, params.song_id);
+    })
+    .then(result => {
+      if (!result.changes) {
+        Promise.reject("song_update_failed");
+        return;
+      }
+      Promise.resolve(result.changes);
+    });
+};
+
+exports._updateSongTimestamp = function _updateSongTimestamp(db, songId) {
+  const sql = 'UPDATE songs' +
+        '  SET update_time = CURRENT_TIMESTAMP' +
+        '  WHERE song_id = ?';
+  return pSqlite3.runStatement(db, sql, songId);
 };
 
 exports.addPart = function addPart(params) {
-  return new Promise((resolve, reject) => {
-    // const db = this.connect();
-    let db;
-    let part;
-    let stmt;
-
-    this.transaction()
-      .then(_db => {
-        db = _db;
-        stmt = db.prepare('INSERT INTO parts ' +
-                          '  (song_id, name, order)' +
-                          '  VALUE (?, ?, ?)');
-        return this.runStatementAll(stmt,
-                                    params.song_id,
-                                    params.name,
-                                    params.order);
-      })
-      .then(result => {
-          stmt.finalize();
-          if (!result.changes) {
-            return Promise.reject(new Error("add_part_failed"));
-          }
-          stmt = db.prepare('UPDATE songs' +
-                            '  SET update_time = CURRENT_TIMESTAMP' +
-                            '  WHERE song_id = ?');
-          return this.runStatement(stmt, part.song_id);
-      })
-      .then(result => {
-        stmt.finalize();
-          if (!result.changes) {
-            return Promise.reject(new Error("update_timestamp_failed"));
-          }
-        return this.commit(db);
-      })
-      .then(
-        db => {
-          db.close();
-          resolve(1);
-        },
-        err => {
-          if (stmt) { stmt.finalize(); }
-          db.close();
-          reject(err);
-        }
-      )
-      .catch(err => {
-        if (stmt) { stmt.finalize(); }
-        this.rollback(db).finally(() => {
-          db.close();
-          reject(err);
-        });
-      });
-  });
+  let _db;
+  return pSqlite3.connect(config)
+    .then(db => {
+      _db = db;
+      return pSqlite3.transaction(db);
+    })
+    .then(db => {
+      const sql = 'INSERT INTO parts ' +
+            '  (song_id, name, order)' +
+            '  VALUE (?, ?, ?)';
+      return pSqlite3.runStatementAndGetAll(db, sql,
+                                        params.song_id,
+                                        params.name,
+                                        params.order);
+    })
+    .then(result => {
+      if (!result.changes) {
+        return Promise.reject("add_part_failed");
+      }
+      return this._updateSongTimestamp(_db, params.song_id);
+    })
+    .then(result => {
+      if (!result.changes) {
+        return Promise.reject("update_timestamp_failed");
+      }
+      return pSqlite3.commit(_db);
+    })
+    .then(db => {
+      return Promise.resolve(params);
+    });
 };
 
 exports.updatePart = function updatePart(params) {
-  return new Promise((resolve, reject) => {
-    // const db = this.connect();
-    let db;
-    let part;
-    let stmt;
-
-    this.transaction()
-      .then(_db => {
-        db = _db;
-        stmt = db.prepare('UPDATE parts ' +
-                          '  (name, order, user_id, instrument_name)' +
-                          '  VALUE (?, ?, ?, ?)' +
-                          '  WHERE part_id = ?');
-        return this.runStatementAll(stmt,
-                                    params.name,
-                                    params.order,
-                                    params.user_id,
-                                    params.instrument_name,
-                                    params.part_id);
-      })
-      .then(_db => {
-        stmt = db.prepare('UPDATE songs' +
-                          '  SET update_time = CURRENT_TIMESTAMP' +
-                          '  WHERE song_id = ?');
-        return this.runStatement(stmt, part.song_id);
-      })
-      .then(result => {
-        stmt.finalize();
-          if (!result.changes) {
-            return Promise.reject(new Error("update_timestamp_failed"));
-          }
-        return this.commit(db);
-      })
-      .then(
-        db => {
-          db.close();
-          resolve(1);
-        },
-        err => {
-          if (stmt) { stmt.finalize(); }
-          db.close();
-          reject(err);
-        }
-      )
-      .catch(err => {
-        if (stmt) { stmt.finalize(); }
-        this.rollback(db).finally(() => {
-          db.close();
-          reject(err);
-        });
-      });
-  });
+  let _db;
+  return pSqlite3.connect(config)
+    .then(db => {
+      _db = db;
+      return pSqlite3.transaction(db);
+    })
+    .then(db => {
+      const sql = 'UPDATE parts ' +
+            '  (name, order, user_id, instrument_name)' +
+            '  VALUE (?, ?, ?, ?)' +
+            '  WHERE part_id = ?';
+      return pSqlite3.runStatement(db, sql,
+                                   params.name,
+                                   params.order,
+                                   params.user_id,
+                                   params.instrument_name,
+                                   params.part_id);
+    })
+    .then(result => {
+      if (!result.changes) {
+        return Promise.reject(new Error("update_timestamp_failed"));
+      }
+      return this._updateSongTimestamp(db, part.song_id);
+    })
+    .then( result => {
+      if (!result.changes) {
+        return Promise.reject("update_timestamp_failed");
+      }
+      return pSqlite3.commit(_db);
+    })
+    .then(db => {
+      return Promise.resolve(params);
+    });
 };
 
 exports.deletePart = function deletePart(params) {
-  return new Promise((resolve, reject) => {
-    // const db = this.connect();
-    let db;
-    let part;
-    let stmt;
+  let _db;
+  let _part;
+  return pSqlite3.connect(config)
+    .then(db => {
+      _db = db;
+      return pSqlite3.transaction(db);
+    })
+    .then(db => {
+      const sql = 'SELECT * FROM parts WHERE part_id = ?';
+      return pSqlite3.runStatementAndGet(db, sql, params.part_id);
+    })
+    .then(part => {
+      if (!part) {
+        return Promise.reject("no_part_exists");
+      }
+      if (part.user_id) {
+        return Promise.reject("part_has_player");
+      }
+      _part = part;
+      const sql = 'DELETE FROM parts WHERE part_id = ?';
+      return pSqlite3.runStatement(_db, sql, params.part_id);
+    })
+    .then(result => {
+      if (!result.changes) {
+        return Promise.reject("delete_part_failed");
+      }
+      return this._updateSongTimestamp(_db, _part.song_id);
+    })
+    .then(result => {
+      if (!result.changes) {
+        return Promise.reject(new Error("update_timestamp_failed"));
+      }
+      return pSqlite3.commit(_db);
+    })
+    .then(db => {
+      return Promise.resolve(_part);
+    });
+};
 
-    this.transaction()
-      .then(_db => {
-        db = _db;
-        stmt = db.prepare('SELECT * FROM parts ' +
-                          '  WHERE part_id = ?');
-        return this.runStatementAll(stmt, params.part_id);
-      })
-      .then(parts => {
-        stmt.finalize();
-        if (parts.length == 0) {
-          return Promise.reject(new Error("no_part_exists"));
-        }
-        part = parts[0];
-        if (part.user_id) {
-          return Promise.reject(new Error("part_has_player"));
-        }
-        stmt = db.prepare('DELETE FROM parts ' +
-                          '  WHERE part_id = ?');
-        return this.runStatement(stmt, params.part_id);
-      })
-      .then(result => {
-          stmt.finalize();
-          if (!result.changes) {
-            return Promise.reject(new Error("delete_part_failed"));
-          }
-          stmt = db.prepare('UPDATE songs' +
-                            '  SET update_time = CURRENT_TIMESTAMP' +
-                            '  WHERE song_id = ?');
-          return this.runStatement(stmt, part.song_id);
-      })
-      .then(result => {
-        stmt.finalize();
-          if (!result.changes) {
-            return Promise.reject(new Error("update_timestamp_failed"));
-          }
-        return this.commit(db);
-      })
-      .then(
-        db => {
-          db.close();
-          resolve(1);
-        },
-        err => {
-          if (stmt) { stmt.finalize(); }
-          db.close();
-          reject(err);
-        }
-      )
-      .catch(err => {
-        if (stmt) { stmt.finalize(); }
-        this.rollback(db).finally(() => {
-          db.close();
-          reject(err);
-        });
-      });
-  });
+exports.getSong = function getSong(params) {
+  return pSqlite3.connect(config)
+    .then(db => {
+      const sql = 'SELECT songs.*, users.name AS author FROM songs' +
+            '  LEFT JOIN users USING(user_id)' +
+            '  WHERE song_id = ?';
+      return pSqlite3.runStatementAndGet(db, sql, params.song_id);
+    });
 };
 
 exports.getSongs = function getSongs() {
-  return new Promise((resolve, reject) => {
-    const db = this.connect();
-    let stmt = db.prepare('SELECT songs.*, users.name AS author FROM songs' +
-                          '  LEFT JOIN users USING(user_id)' +
-                          '  ORDER BY song_id ASC');
-    let songs;
-    this.runStatementAll(stmt)
-      .then(rows => {
-        stmt.finalize();
-        songs = rows;
-        stmt = db.prepare('SELECT parts.*, users.name AS entry_name' +
-                          '  FROM parts' +
-                          '  LEFT JOIN users USING(user_id)');
-        return this.runStatementAll(stmt);
+  let _songs;
+  let _db;
+  return pSqlite3.connect(config)
+    .then(db => {
+      _db = db;
+      const sql = 'SELECT songs.*, users.name AS author FROM songs' +
+            '  LEFT JOIN users USING(user_id)' +
+            '  ORDER BY song_id ASC';
+      return pSqlite3.runStatementAndGetAll(db, sql);
+    })
+    .then(rows => {
+      _songs = rows;
+      const sql = 'SELECT parts.*, users.name AS entry_name' +
+            '  FROM parts' +
+            '  LEFT JOIN users USING(user_id)';
+      return pSqlite3.runStatementAndGetAll(_db, sql);
       })
-      .then(rows => {
-        stmt.finalize();
-        const partList = {};
-        for (const part of rows) {
-          if (partList[part.song_id] === undefined) {
-            partList[part.song_id] = [];
-          }
-          partList[part.song_id].push(part);
+    .then(rows => {
+      const partList = {};
+      for (const part of rows) {
+        if (partList[part.song_id] === undefined) {
+          partList[part.song_id] = [];
         }
-        for (const song of songs) {
-          song.parts = partList[song.song_id] || [];
-        }
-        db.close();
-        resolve(songs);
-      })
-      .catch(err => {
-        if (stmt) { stmt.finalize(); };
-        db.close();
-        reject(err);
-      });
-  });
+        partList[part.song_id].push(part);
+      }
+      for (const song of _songs) {
+        song.parts = partList[song.song_id] || [];
+      }
+      return Promise.resolve(_songs);
+    });
 };
 
 exports.createEntry = function createEntry(params) {
-  return new Promise((resolve, reject) => {
-    const db = this.connect();
-    const stmt = db.prepare('UPDATE parts SET user_id = ?, instrument_name = ?' +
-                            '  WHERE part_id = ? AND user_id IS NULL');
-    this.runStatement(stmt,
-                      params.user_id,
-                      params.instrument_name || "",
-                      params.part_id)
-      .then(result => {
-        stmt.finalize();
-        db.close();
-        resolve(result.changes);
-      })
-      .catch(err => {
-        stmt.finalize();
-        db.close();
-        reject(err);
-      });
-  });
+  return pSqlite3.connect(config)
+    .then(db => {
+      const sql = 'UPDATE parts SET user_id = ?, instrument_name = ?' +
+            '  WHERE part_id = ? AND user_id IS NULL';
+      pSqlite3.runStatement(db, sql,
+                            params.user_id,
+                            params.instrument_name || "",
+                            params.part_id);
+    });
 };
 
 exports.deleteEntry = function deleteEntry(params) {
-  return new Promise((resolve, reject) => {
-    const db = this.connect();
-    const stmt = db.prepare('UPDATE parts ' +
-                            'SET user_id = NULL, instrument_name = NULL' +
-                            '  WHERE part_id = ?');
-    this.runStatement(stmt,
-                      params.user_id,
-                      params.instrument_name || "",
-                      params.part_id)
-      .then(result => {
-        stmt.finalize();
-        db.close();
-        resolve(result.changes);
-      })
-      .catch(err => {
-        stmt.finalize();
-        db.close();
-        reject(err);
-      });
-  });
+  return pSqlite3.connect(config)
+    .then(db => {
+      const sql = 'UPDATE parts ' +
+            'SET user_id = NULL, instrument_name = NULL' +
+            '  WHERE part_id = ?';
+      pSqlite3.runStatement(db, sql,
+                            params.user_id,
+                            params.instrument_name || "",
+                            params.part_id);
+    });
 };
 
 exports.createComment = function createComment(params) {
-  return new Promise((resolve, reject) => {
-    const db = this.connect();
-    const stmt = db.prepare('INSERT INTO comments' +
-                            '         (user_id, comment, song_id)' +
-                            '  VALUES (?, ?, ?)');
-    this.runStatement(stmt,
-                      params.user_id,
-                      params.comment,
-                      params.song_id).then(
-      result => {
-        stmt.finalize();
-        db.close();
-        if (!result.lastID) {
-          reject(new Error("comment_create_failed"));
-          return;
-        }
-        resolve(result.lastID);
-        return;
-      })
-      .catch(err => {
-        stmt.finalize();
-        db.close();
-        reject(err);
-      });
-  });
+  return pSqlite3.connect(config)
+    .then(db => {
+      const sql = 'INSERT INTO comments (user_id, comment, song_id)' +
+            '  VALUES (?, ?, ?)';
+      pSqlite3.runStatement(db, sql,
+                            params.user_id,
+                            params.comment,
+                            params.song_id);
+    })
+    .then(result => {
+      if (!result.lastID) {
+        return Promise.reject("comment_create_failed");
+      }
+      params.comment_id = result.lastID;
+      return Promise.resolve(params);
+    });
 };
 
 exports.deleteComment = function deleteComment(params) {
-  return new Promise((resolve, reject) => {
-    const db = this.connect();
-    const stmt = db.prepare('UPDATE comments' +
-                            '  SET status = "deleted",' +
-                            '      update_time = CURRENT_TIMESTAMP' +
-                            '  WHERE comment_id = ?');
-    this.runStatement(stmt, params.comment_d).then(
-      result => {
-        stmt.finalize();
-        db.close();
-        if (!result.changes) {
-          reject(new Error("comment_delete_failed"));
-          return;
-        }
-        resolve(result.changes);
-        return;
-      })
-      .catch(err => {
-        stmt.finalize();
-        db.close();
-        reject(err);
-      });
-  });
+  return pSqlite3.connect(config)
+    .then(db => {
+      const sql = 'UPDATE comments' +
+            '  SET status = "deleted",' +
+            '      update_time = CURRENT_TIMESTAMP' +
+            '  WHERE comment_id = ?';
+      return pSqlite3.runStatement(db, sql, params.comment_d);
+    });
 };
 
 exports.createLog = function createLog(params) {
-  return new Promise((resolve, reject) => {
-    const db = this.connect();
-    const stmt = db.prepare('INSERT INTO logs' +
-                            '         (user_id, action, target_id)' +
-                            '  VALUES (?,       ?,       ?)');
-    this.runStatement(stmt,
-                      params.user_id,
-                      params.action,
-                      params.target_id)
-      .then(result => {
-        stmt.finalize();
-        db.close();
-        if (!result.lastID) {
-          reject(new Error("log_create_failed"));
-          return;
-        }
-        resolve(result.lastID);
-        return;
-      })
-      .catch(err => {
-        stmt.finalize();
-        db.close();
-        reject(err);
-      });
-  });
+  return pSqlite3.connect(config)
+    .then(db => {
+      const sql = 'INSERT INTO logs' +
+            '         (user_id, action, target_id)' +
+            '  VALUES (?,       ?,       ?)';
+      return pSqlite3.runStatement(db, sql,
+                                   params.user_id,
+                                   params.action,
+                                   params.target_id);
+    })
+    .then(result => {
+      if (!result.lastID) {
+        return Promise.reject("log_create_failed");
+      }
+      params.log_id = result.lastID;
+      return Promise.resolve(params);
+    });
 };

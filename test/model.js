@@ -7,16 +7,31 @@ chai.use(chaiAsPromised);
 chai.should();
 
 describe('model', function () {
-  describe('getOrCreateUser', function () {
-    it('should create and return user', function () {
-      model.getOrCreateUser({name: "modeltest"}).should.be.fulfilled
+  describe('createUser', function () {
+    it('should return user', function () {
+      model.createUser({name: "modeltest"}).should.be.fulfilled
         .and.should.eventually
         .include({name: "modeltest"});
     });
+  });
+  describe('getUser', function () {
     it('should return user', function () {
-      model.getOrCreateUser({name: "modeltest"}).should.be.fulfilled
+      model.getUser({name: "modeltest"}).should.be.fulfilled
         .and.should.eventually
         .include({name: "modeltest"});
+    });
+  });
+
+  describe('getOrCreateUser', function () {
+    it('should create and return user', function () {
+      model.getOrCreateUser({name: "modeltest2"}).should.be.fulfilled
+        .and.should.eventually
+        .include({name: "modeltest2"});
+    });
+    it('should return user', function () {
+      model.getOrCreateUser({name: "modeltest2"}).should.be.fulfilled
+        .and.should.eventually
+        .include({name: "modeltest2"});
     });
   });
 });

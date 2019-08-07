@@ -1,5 +1,6 @@
 const assert = require('assert');
 const http = require('http');
+const config = require('../config');
 
 var chai = require("chai");
 var chaiAsPromised = require("chai-as-promised");
@@ -9,7 +10,7 @@ chai.should();
 const host = "localhost";
 const port = "3000";
 
-function jsonRequest(path, postData, callback) {
+function jsonRequest(path, params, callback) {
   const opt = {
     path: path,
     host: host,
@@ -19,7 +20,9 @@ function jsonRequest(path, postData, callback) {
       'Content-Type': 'application/json',
     },
   };
-  json = JSON.stringify(postData);
+  const postData = Object.assign(params);
+  postData.params.token = config.token;
+  const json = JSON.stringify(postData);
   return new Promise((resolve, reject) => {
     const req = http.request(opt, (res) => {
       var data = "";
@@ -119,7 +122,6 @@ describe('createSong', function () {
     };
     return jsonRequest("/api/", data).should.be.fulfilled;
   });
-
 });
 
 describe('updateSong', function () {
@@ -244,6 +246,7 @@ describe('listSongs', function () {
   it('should return result', function () {
     const data = {
       method: "listSongs",
+      params: {},
     };
     return jsonRequest("/api/", data).should.be.fulfilled
       .and.should.eventually
@@ -258,4 +261,3 @@ describe('listSongs', function () {
                 instrument_name: "楽器"});
   });
 });
-
