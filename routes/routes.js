@@ -1,53 +1,13 @@
 // routes.js
-const url = require('url');
 const model = require('../model/model');
 
-function routes(req, res, next) {
-  const parsedUrl = url.parse(req.url);
+const ERROR_NO_UPDATE = { code: -32101, message: "no_update" };
+const ERROR_TARGET_NOT_FOUND = { code: -32102, message: "target_not_found" };
+const ERROR_CREATE_FAILED = { code: -32103, message: "create_failed" };
+const ERROR_CONSTRAINT_VIOLATION = { code: -32104, message: "constraint_violation" };
+const ERROR_CREATELOG_FAILED = { code: -32105, message: "create_log_failed" };
 
-  if (parsedUrl.pathname == '/api/') {
-    apiEndPoint(req, res, next);
-    return;
-  }
-  if (parsedUrl.pathname == '/') {
-  }
-  next();
-  return;
-}
-
-function apiEndPoint(req, res, next) {
-  if (req.body.method == "createSong") {
-    createSong(req, res, next);
-  }
-  else if (req.body.method == "updateSong") {
-    updateSong(req, res, next);
-  }
-  else if (req.body.method == "addPart") {
-    addPart(req, res, next);
-  }
-  else if (req.body.method == "deletePart") {
-    deletePart(req, res, next);
-  }
-  else if (req.body.method == "listSongs") {
-    listSongs(req, res, next);
-  }
-  else if (req.body.method == "createEntry") {
-    createEntry(req, res, next);
-  }
-  else if (req.body.method == "createComment") {
-    createComment(req, res, next);
-  }
-  else if (req.body.method == "deleteComment") {
-    deleteComment(req, res, next);
-  }
-  else if (req.body.method == "deleteEntry") {
-    deleteEntry(req, res, next);
-  } else {
-    res.json({ error: { code: -32601, message: "method_not_found" } });
-  }
-}
-
-function createEntry(req, res, next) {
+exports.createEntry = function createEntry(req, res, next) {
   const params = req.body.params || {};
   let err = "";
   let entryId;
@@ -71,27 +31,22 @@ function createEntry(req, res, next) {
     })
     .then(changes => {
       if (changes == 0) {
-        res.json({error: { code: -32101, message: "no_changes" }});
-        return;
+        res.json({error: ERROR_CREATE_FAILED});
+        return Promise.failed("no_changes");
       }
-      model.createLog({user_id: params.user_id,
-                       target_id: params.part_id,
-                       action: "entry"})
-        .then(_logId => {
-          res.json({result: {entry: {entry_id: entryId,
-                                     song_id: params.song_id,
-                                     user_id: params.user_id,
-                                     part_id: params.part_id,
-                                     instrument_name: params.instrument_name,
-                                    }}});
-        });
+      return model.createLog({user_id: params.user_id,
+                              target_id: params.part_id,
+                              action: "create_entry"});
+    })
+    .then(_logId => {
+      res.json({result: { part: params }});
     })
     .catch(err => {
       res.json({ error: { code: -32603, message: err.toString()} });
     });
 };
 
-function deleteEntry(req, res, next) {
+exports.deleteEntry = function deleteEntry(req, res, next) {
   const params = req.body.params || {};
 
   // check params
@@ -100,36 +55,30 @@ function deleteEntry(req, res, next) {
     return;
   }
 
-  // get entry
-
-  model.deleteEntry(params)
+  // get part
+  model.getPart(params.part_id)
+    .then(part => {
+      return model.deleteEntry(part.part_id);
+    })
     .then(changes => {
       if (!changes) {
-        res.json({ error: { code: -32200, message: "no_part_id" } });
-        return;
+        res.json({ error: ERROR_NO_UPDATE });
+        return Promise.failed();
       }
       return model.createLog({user_id: params.user_id,
-                              target_id: _commentId,
-                              action: "create_comment"});
-      res.json({ result: { changes: changes } });
+                              target_id: params.part_id,
+                              action: "delete_entry"});
     })
-    .then(_commentId => {
-      params.comment_id = _commentId;
-      return model.createLog({user_id: params.user_id,
-                              target_id: _commentId,
-                              action: "create_comment"});
+    .then(_logId => {
+      res.json({result: {part: params}});
     })
     .catch(err => {
-      if (err.code && err.code === 'SQLITE_CONSTRAINT') {
-        res.json({ error: { code: -32100, message: "SQLITE_CONSTRAINT" } });
-        return;
-      }
-      res.json({ error: { code: -32603, message: err.toString()}});
+      res.json({ error: { code: -32602, message: "no_part_id"} });
+      return;
     });
-  return;
-}
+};
 
-function createComment(req, res, next) {
+exports.createComment = function createComment(req, res, next) {
   const params = req.body.params || {};
   let err = "";
 
@@ -161,20 +110,58 @@ function createComment(req, res, next) {
     })
     .catch(err => {
       if (err.code && err.code === 'SQLITE_CONSTRAINT') {
-        res.json({ error: { code: -32100, message: "SQLITE_CONSTRAINT" } });
+        res.json({ error: ERROR_CONSTRAINT_VIOLATION });
         return;
       }
       console.error(err);
       res.json({ error: { code: -32603, message: err.toString()}});
     });
   return;
-}
+};
 
-function deleteComment(req, res, next) {
-  const params = req.body.params;
-}
+exports.deleteComment = function deleteComment(req, res, next) {
+  const params = req.body.params || {};
+  
+  // check params
+  if (!params.comment_id) {
+    res.json({ error: { code: -32602, message: "no_comment_id"} });
+    return;
+  }
 
-function createSong(req, res, next) {
+  // get comment
+  let _comment;
+  model.getComment(params.comment_id)
+    .catch(err => {
+      return Promise.reject(ERROR_TARGET_NOT_FOUND);
+    })
+    .then(comment => {
+      _comment = comment;
+      return model.deleteComment(comment.comment_id);
+    })
+    .catch(err => {
+      return Promise.reject({code: -32603, message: error});
+    })
+    .then(changes => {
+      if (!changes) {
+        return Promise.reject({error: ERROR_NO_UPDATE});
+      }
+      return model.createLog({user_id: params.user_id,
+                              target_id: params.part_id,
+                              action: "delete_entry"});
+    })
+    .catch(err => {
+      return Promise.reject({ error: ERROR_CREATELOG_FAILED });
+    })
+    .then(_logId => {
+      res.json({result: {comment: _comment}});
+    })
+    .catch(err => {
+      res.json({ error: err });
+      return;
+    });
+};
+
+exports.createSong = function createSong(req, res, next) {
   const params = req.body.params;
   let err = "";
 
@@ -216,25 +203,64 @@ function createSong(req, res, next) {
     })
     .catch(err => {
       if (err.code && err.code === 'SQLITE_CONSTRAINT') {
-        res.json({ error: { code: -32100, message: "SQLITE_CONSTRAINT" } });
+        res.json({ error: ERROR_CONSTRAINT_VIOLATION });
         return;
       }
       console.error(err);
       res.json({ error: { code: -32603, message: err.toString()}});
     });
   return;
-}
+};
 
-function updateSong(req, res, next) {
-}
+exports.updateSong = function updateSong(req, res, next) {
+  const params = req.body.params || {};
+  
+  // check params
+  if (!params.song_id) {
+    res.json({ error: { code: -32602, message: "no_comment_id"} });
+    return;
+  }
 
-function addPart(req, res, next) {
-}
+  // get comment
+  let _comment;
+  model.getComment(params.comment_id)
+    .catch(err => {
+      return Promise.reject(ERROR_TARGET_NOT_FOUND);
+    })
+    .then(comment => {
+      _comment = comment;
+      return model.deleteComment(comment.comment_id);
+    })
+    .catch(err => {
+      return Promise.reject({code: -32603, message: error});
+    })
+    .then(changes => {
+      if (!changes) {
+        return Promise.reject({error: ERROR_NO_UPDATE});
+      }
+      return model.createLog({user_id: params.user_id,
+                              target_id: params.part_id,
+                              action: "delete_entry"});
+    })
+    .catch(err => {
+      return Promise.reject({ error: ERROR_CREATELOG_FAILED });
+    })
+    .then(_logId => {
+      res.json({result: {comment: _comment}});
+    })
+    .catch(err => {
+      res.json({ error: err });
+      return;
+    });
+};
 
-function deletePart(req, res, next) {
-}
+exports.addPart = function addPart(req, res, next) {
+};
 
-function listSongs(req, res, next) {
+exports.deletePart = function deletePart(req, res, next) {
+};
+
+exports.listSongs = function listSongs(req, res, next) {
   const params = req.body.params;
   model.getSongs()
     .then((songs) => {
@@ -243,6 +269,5 @@ function listSongs(req, res, next) {
     .catch((err) => {
       res.json({ error: { code: -32603, message: err } });
     });
-}
+};
   
-module.exports = exports = routes;

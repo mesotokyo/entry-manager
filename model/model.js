@@ -71,6 +71,23 @@ exports.getParts = function getParts(params) {
     });
 };
 
+exports.getPart = function getPart(partId) {
+  if (partId === undefined) {
+    return Promise.reject("no_part_id");
+  }
+
+  let _db;
+  return pSqlite3.connect(config)
+    .then(db => {
+      _db = db;
+      const sql = 'SELECT * FROM parts WHERE part_id = ?';
+      return pSqlite3.runStatementAndGet(db, sql, partId);
+    })
+    .finally(() => {
+      _db.close();
+    });
+};
+
 exports.createSong = function createSong(params) {
   let _db;
   return pSqlite3.connect(config)
@@ -118,8 +135,10 @@ exports.createSong = function createSong(params) {
 };
 
 exports.updateSong = function updateSong(params) {
+  let _db;
   return pSqlite3.connect(config)
     .then(db => {
+      _db = db;
       const sql= 'UPDATE songs' +
             '  (title, reference, url, comment, '+
             '     status, update_time)' +
@@ -136,6 +155,9 @@ exports.updateSong = function updateSong(params) {
         return;
       }
       Promise.resolve(result.changes);
+    })
+    .finally(() => {
+      _db.close();
     });
 };
 
@@ -176,6 +198,9 @@ exports.addPart = function addPart(params) {
     })
     .then(db => {
       return Promise.resolve(params);
+    })
+    .finally(() => {
+      _db.close();
     });
 };
 
@@ -212,10 +237,13 @@ exports.updatePart = function updatePart(params) {
     })
     .then(db => {
       return Promise.resolve(params);
+    })
+    .finally(() => {
+      _db.close();
     });
 };
 
-exports.deletePart = function deletePart(params) {
+exports.deletePart = function deletePart(partId) {
   let _db;
   let _part;
   return pSqlite3.connect(config)
@@ -225,7 +253,7 @@ exports.deletePart = function deletePart(params) {
     })
     .then(db => {
       const sql = 'SELECT * FROM parts WHERE part_id = ?';
-      return pSqlite3.runStatementAndGet(db, sql, params.part_id);
+      return pSqlite3.runStatementAndGet(db, sql, partId);
     })
     .then(part => {
       if (!part) {
@@ -236,7 +264,7 @@ exports.deletePart = function deletePart(params) {
       }
       _part = part;
       const sql = 'DELETE FROM parts WHERE part_id = ?';
-      return pSqlite3.runStatement(_db, sql, params.part_id);
+      return pSqlite3.runStatement(_db, sql, part.part_id);
     })
     .then(result => {
       if (!result.changes) {
@@ -252,16 +280,24 @@ exports.deletePart = function deletePart(params) {
     })
     .then(db => {
       return Promise.resolve(_part);
+    })
+    .finally(() => {
+      _db.close();
     });
 };
 
-exports.getSong = function getSong(params) {
+exports.getSong = function getSong(songId) {
+  let _db;
   return pSqlite3.connect(config)
     .then(db => {
+      _db = db;
       const sql = 'SELECT songs.*, users.name AS author FROM songs' +
             '  LEFT JOIN users USING(user_id)' +
             '  WHERE song_id = ?';
-      return pSqlite3.runStatementAndGet(db, sql, params.song_id);
+      return pSqlite3.runStatementAndGet(db, sql, songId);
+    })
+    .finally(() => {
+      _db.close();
     });
 };
 
@@ -295,37 +331,49 @@ exports.getSongs = function getSongs() {
         song.parts = partList[song.song_id] || [];
       }
       return Promise.resolve(_songs);
+    })
+    .finally(() => {
+      _db.close();
     });
 };
 
 exports.createEntry = function createEntry(params) {
+  let _db;
   return pSqlite3.connect(config)
     .then(db => {
+      _db = db;
       const sql = 'UPDATE parts SET user_id = ?, instrument_name = ?' +
             '  WHERE part_id = ? AND user_id IS NULL';
       pSqlite3.runStatement(db, sql,
                             params.user_id,
                             params.instrument_name || "",
                             params.part_id);
+    })
+    .finally(() => {
+      _db.close();
     });
 };
 
-exports.deleteEntry = function deleteEntry(params) {
+exports.deleteEntry = function deleteEntry(partId) {
+  let _db;
   return pSqlite3.connect(config)
     .then(db => {
+      _db = db;
       const sql = 'UPDATE parts ' +
             'SET user_id = NULL, instrument_name = NULL' +
             '  WHERE part_id = ?';
-      pSqlite3.runStatement(db, sql,
-                            params.user_id,
-                            params.instrument_name || "",
-                            params.part_id);
+      pSqlite3.runStatement(db, sql, partId);
+    })
+    .finally(() => {
+      _db.close();
     });
 };
 
 exports.createComment = function createComment(params) {
+  let _db;
   return pSqlite3.connect(config)
     .then(db => {
+      _db = db;
       const sql = 'INSERT INTO comments (user_id, comment, song_id)' +
             '  VALUES (?, ?, ?)';
       pSqlite3.runStatement(db, sql,
@@ -339,23 +387,64 @@ exports.createComment = function createComment(params) {
       }
       params.comment_id = result.lastID;
       return Promise.resolve(params);
+    })
+    .finally(() => {
+      _db.close();
     });
 };
 
-exports.deleteComment = function deleteComment(params) {
+exports.getComment = function getComment(comment_id) {
+  let _db;
   return pSqlite3.connect(config)
     .then(db => {
+      _db = db;
+      const sql = 'SELECT comments.*, users.name AS author FROM comments' +
+            '  LEFT JOIN users USING(user_id)' +
+            '  WHERE comments.comment_id = ?';
+      return pSqlite3.runStatementAndGet(db, sql, comment_id);
+    })
+    .finally(() => {
+      _db.close();
+    });
+};
+
+exports.getComments = function getComments(song_id) {
+  let _db;
+  return pSqlite3.connect(config)
+    .then(db => {
+      _db = db;
+      const sql = 'SELECT comments.*, users.name AS author FROM comments' +
+            '  LEFT JOIN users USING(user_id)' +
+            '  WHERE comments.song_id = ? AND comments.status IS NULL';
+      return pSqlite3.runStatementAndGetAll(db, sql, song_id);
+    })
+    .finally(() => {
+      _db.close();
+    });
+};
+
+
+exports.deleteComment = function deleteComment(commentId) {
+  let _db;
+  return pSqlite3.connect(config)
+    .then(db => {
+      _db = db;
       const sql = 'UPDATE comments' +
             '  SET status = "deleted",' +
             '      update_time = CURRENT_TIMESTAMP' +
             '  WHERE comment_id = ?';
-      return pSqlite3.runStatement(db, sql, params.comment_d);
+      return pSqlite3.runStatement(db, sql, commentId);
+    })
+    .finally(() => {
+      _db.close();
     });
 };
 
 exports.createLog = function createLog(params) {
+  let _db;
   return pSqlite3.connect(config)
     .then(db => {
+      _db = db;
       const sql = 'INSERT INTO logs' +
             '         (user_id, action, target_id)' +
             '  VALUES (?,       ?,       ?)';
@@ -370,5 +459,8 @@ exports.createLog = function createLog(params) {
       }
       params.log_id = result.lastID;
       return Promise.resolve(params);
+    })
+    .finally(() => {
+      _db.close();
     });
 };

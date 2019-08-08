@@ -3,7 +3,7 @@ const connect = require('connect');
 const http = require('http');
 
 const bodyParser = require('body-parser');
-const routes = require('./routes/routes');
+const router = require('./router');
 const app = connect();
 const serveStatic = require('serve-static');
 
@@ -21,7 +21,7 @@ app.use(require('./middleware/response'));
 app.use(require('./middleware/token-auth')(config));
 
 // /api
-app.use(routes);
+app.use(router);
 
 // static files
 
