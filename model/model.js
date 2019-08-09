@@ -112,13 +112,13 @@ exports.createSong = function createSong(params) {
       let order = 0;
       let inserted = 0;
       let error_count = 0;
-      const sql = 'INSERT INTO parts (song_id, name, `order`)' +
+      const sql = 'INSERT INTO parts (song_id, part_name, `order`)' +
             '           VALUES (?, ?, ?)';
       const promises = [];
-      for (const name of params.parts) {
+      for (const part_name of params.parts) {
         promises.push(pSqlite3.runStatement(_db, sql,
                                             params.song_id,
-                                            name, order));
+                                            part_name, order));
         order++;
       }
       return Promise.all(promises);
@@ -140,9 +140,9 @@ exports.updateSong = function updateSong(params) {
     .then(db => {
       _db = db;
       const sql= 'UPDATE songs' +
-            '  (title, reference, url, comment, '+
+            '  SET (title, reference, url, comment, '+
             '     status, update_time)' +
-            '  VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)' +
+            '  = (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)' +
             '  WHERE song_id = ?';
       return pSqlite3.runStatement(db, sql,
                                params.title, params.reference,
@@ -151,10 +151,9 @@ exports.updateSong = function updateSong(params) {
     })
     .then(result => {
       if (!result.changes) {
-        Promise.reject("song_update_failed");
-        return;
+        return Promise.reject("song_update_failed");
       }
-      Promise.resolve(result.changes);
+      return Promise.resolve(result.changes);
     })
     .finally(() => {
       _db.close();
@@ -177,17 +176,18 @@ exports.addPart = function addPart(params) {
     })
     .then(db => {
       const sql = 'INSERT INTO parts ' +
-            '  (song_id, name, order)' +
-            '  VALUE (?, ?, ?)';
-      return pSqlite3.runStatementAndGetAll(db, sql,
-                                        params.song_id,
-                                        params.name,
-                                        params.order);
+            '  (song_id, part_name, `order`)' +
+            '  VALUES (?, ?, ?)';
+      return pSqlite3.runStatement(db, sql,
+                                   params.song_id,
+                                   params.part_name,
+                                   params.order);
     })
     .then(result => {
-      if (!result.changes) {
+      if (!result.lastID) {
         return Promise.reject("add_part_failed");
       }
+      params.part_id = result.lastID;
       return this._updateSongTimestamp(_db, params.song_id);
     })
     .then(result => {
@@ -213,11 +213,11 @@ exports.updatePart = function updatePart(params) {
     })
     .then(db => {
       const sql = 'UPDATE parts ' +
-            '  (name, order, user_id, instrument_name)' +
+            '  (part_name, order, user_id, instrument_name)' +
             '  VALUE (?, ?, ?, ?)' +
             '  WHERE part_id = ?';
       return pSqlite3.runStatement(db, sql,
-                                   params.name,
+                                   params.part_name,
                                    params.order,
                                    params.user_id,
                                    params.instrument_name,
@@ -344,10 +344,10 @@ exports.createEntry = function createEntry(params) {
       _db = db;
       const sql = 'UPDATE parts SET user_id = ?, instrument_name = ?' +
             '  WHERE part_id = ? AND user_id IS NULL';
-      pSqlite3.runStatement(db, sql,
-                            params.user_id,
-                            params.instrument_name || "",
-                            params.part_id);
+      return pSqlite3.runStatement(db, sql,
+                                   params.user_id,
+                                   params.instrument_name || "",
+                                   params.part_id);
     })
     .finally(() => {
       _db.close();
@@ -362,7 +362,7 @@ exports.deleteEntry = function deleteEntry(partId) {
       const sql = 'UPDATE parts ' +
             'SET user_id = NULL, instrument_name = NULL' +
             '  WHERE part_id = ?';
-      pSqlite3.runStatement(db, sql, partId);
+      return pSqlite3.runStatement(db, sql, partId);
     })
     .finally(() => {
       _db.close();
@@ -376,10 +376,10 @@ exports.createComment = function createComment(params) {
       _db = db;
       const sql = 'INSERT INTO comments (user_id, comment, song_id)' +
             '  VALUES (?, ?, ?)';
-      pSqlite3.runStatement(db, sql,
-                            params.user_id,
-                            params.comment,
-                            params.song_id);
+      return pSqlite3.runStatement(db, sql,
+                                   params.user_id,
+                                   params.comment,
+                                   params.song_id);
     })
     .then(result => {
       if (!result.lastID) {

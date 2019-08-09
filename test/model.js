@@ -14,6 +14,7 @@ describe('model', function () {
         .include({name: "modeltest"});
     });
   });
+/*
   describe('getUser', function () {
     it('should return user', function () {
       model.getUser({name: "modeltest"}).should.be.fulfilled
@@ -21,6 +22,7 @@ describe('model', function () {
         .include({name: "modeltest"});
     });
   });
+*/
 
   describe('getOrCreateUser', function () {
     it('should create and return user', function () {
@@ -34,4 +36,5 @@ describe('model', function () {
         .include({name: "modeltest2"});
     });
   });
+
 });

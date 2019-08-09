@@ -30,8 +30,7 @@ function jsonRequest(path, params, callback) {
         data += chunk;
       });
       res.on('end', () => {
-        let result;
-        // console.error(data);
+        //console.log(data);
         try {
           result = JSON.parse(data);
         }
@@ -40,7 +39,10 @@ function jsonRequest(path, params, callback) {
           return;
         }
         if (result.error) {
-          reject(result.error.message || result.error.code);
+          if (result.error.message) {
+            reject(result.error.message);
+          }
+          reject(result.error);
         } else {
           resolve(result);
         }
@@ -62,7 +64,7 @@ describe('createSong', function () {
         url: "http://example.com",
         comment: "テストのコメント",
         author: "ほげ",
-        parts: ["ボーカル", "ギター", "ドラム"]
+        parts: ["ボーカル", "ギター", "ドラム", "アレ"]
       },
     };
     return jsonRequest("/api/", data).should.be.fulfilled
@@ -130,7 +132,7 @@ describe('updateSong', function () {
       method: "updateSong",
       params: {
         song_id: 1,
-        name: "更新後のタイトル",
+        title: "更新後のタイトル",
         reference: "出典2",
         url: "http://example.com/foo",
         comment: "更新後のコメント"
@@ -139,8 +141,12 @@ describe('updateSong', function () {
     return jsonRequest("/api/", data).should.be.fulfilled
       .and.should.eventually
       .have.property('result')
-      .with.have.property('changes')
-      .equal(1);
+      .with.have.property('song')
+      .include({title: data.params.title,
+                reference: data.params.reference,
+                url: data.params.url,
+                comment: data.params.comment,
+               });
   });
 
   it('should succeed but no changes when duplicate values', function () {
@@ -148,40 +154,41 @@ describe('updateSong', function () {
       method: "updateSong",
       params: {
         song_id: 2,
-        reference: "出典の名前",
+        title: "更新後のタイトル",
+        reference: "出典2",
       },
     };
     return jsonRequest("/api/", data).should.be.rejected
       .and.should.eventually
-      .have.property('error')
-      .with.have.property('message')
-      .equal("duplicated_name");
+      .equal("constraint_violation");
   });
+
 });
 
-describe('entry', function () {
+
+describe('createEntry', function () {
   it('should return result', function () {
     const data = {
       method: "createEntry",
       params: {
-        part_id: 1,
-        name: "ほげほげ"
+        part_id: 2,
+        name: "ほげほげ名",
+        instrument_name: "エントリー楽器",
       },
     };
     return jsonRequest("/api/", data).should.be.fulfilled
       .and.should.eventually
       .have.property('result')
-      .with.have.property('entry')
-      .have.all.keys("song_id",
-                     "user_id",
-                     "part_id");
+      .with.have.property('part')
+      .include({part_id: data.params.part_id,
+                instrument_name: data.params.instrument_name});
   });
   it('should fail when entry to entried part', function () {
     const data = {
       method: "createEntry",
       params: {
-        part_id: 1,
-        name: "もげもげ"
+        part_id: 2,
+        name: "もげもげ名",
       },
     };
     return jsonRequest("/api/", data).should.be.rejected;
@@ -190,27 +197,24 @@ describe('entry', function () {
     const data = {
       method: "createEntry",
       params: {
-        part_id: 2,
-        name: "ほげほげ",
+        part_id: 3,
+        name: "ほげほげ名",
         instrument_name: "楽器"
       },
     };
     return jsonRequest("/api/", data).should.be.fulfilled
       .and.should.eventually
       .have.property('result')
-      .with.have.property('entry')
-      .have.all.keys("song_id",
-                     "user_id",
-                     "part_id",
-                     "instrument_name")
-      .include({instrument_name: "楽器"});
+      .with.have.property('part')
+      .include({ part_id: data.params.part_id,
+                 instrument_name: data.params.instrument_name });
   });
   it('should fail when entry to invalid part', function () {
     const data = {
       method: "createEntry",
       params: {
         part_id: 10,
-        name: "ほげほげ",
+        name: "ほげほげ名",
       },
     };
     return jsonRequest("/api/", data).should.be.rejected;
@@ -222,20 +226,20 @@ describe('deleteEntry', function () {
     const data = {
       method: "deleteEntry",
       params: {
-        part_id: 3,
+        part_id: 2,
       },
     };
     return jsonRequest("/api/", data).should.be.fulfilled
       .and.should.eventually
       .have.property('result')
-      .with.have.property('changes')
-      .equal(1);
+      .with.have.property('part')
+      .include({ part_id: data.params.part_id });
   });
-  it('should fail when the part already entried', function () {
+  it('should fail when the part has no entry', function () {
     const data = {
       method: "deleteEntry",
       params: {
-        part_id: 2,
+        part_id: 4,
       },
     };
     return jsonRequest("/api/", data).should.be.rejected;
@@ -252,12 +256,111 @@ describe('listSongs', function () {
       .and.should.eventually
       .have.property('result')
       .with.have.property('songs')
-      .with.have.property('0').with.have.property('parts')
-      .with.have.property('1')
+      .with.have.property('0')
+      .with.have.property('parts')
+      .with.have.property('1');
+  });
+});
+
+describe('createComment', function () {
+  it('should return result', function () {
+    const data = {
+      method: "createComment",
+      params: {
+        song_id: 1,
+        author: "ほげほげ名",
+        comment: "コメントaaa",
+      },
+    };
+    return jsonRequest("/api/", data).should.be.fulfilled
+      .and.should.eventually
+      .have.property('result')
+      .with.have.property('comment')
+      .include({song_id: data.params.song_id,
+                comment: data.params.comment})
+      .and.have.property('comment_id');
+  });
+});
+
+describe('deleteComment', function () {
+  it('should succeed', function () {
+    const data = {
+      method: "deleteComment",
+      params: {
+        comment_id: 1,
+      },
+    };
+    return jsonRequest("/api/", data).should.be.fulfilled
+      .and.should.eventually
+      .have.property('result')
+      .with.have.property('comment')
+      .include({ comment_id: data.params.comment_id });
+  });
+  it('should fail to invalid id', function () {
+    const data = {
+      method: "deleteEntry",
+      params: {
+        comment_id: 10,
+      },
+    };
+    return jsonRequest("/api/", data).should.be.rejected;
+  });
+});
+
+describe('addPart', function () {
+  it('should return result', function () {
+    const data = {
+      method: "addPart",
+      params: {
+        song_id: 1,
+        part_name: "ほげほげなパート名",
+        order: 10,
+      },
+    };
+    return jsonRequest("/api/", data).should.be.fulfilled
+      .and.should.eventually
+      .have.property('result')
+      .with.have.property('part')
+      .include({song_id: data.params.song_id,
+                order: data.params.order,
+                part_name: data.params.part_name});
+  });
+  it('should failed with invalid song_id', function () {
+    const data = {
+      method: "addPart",
+      params: {
+        song_id: 100,
+        part_name: "ほげほげなパート名",
+        order: 10,
+      },
+    };
+    return jsonRequest("/api/", data).should.be.rejected;
+  });
+});
+
+describe('deletePart', function () {
+  it('should return result', function () {
+    const data = {
+      method: "deletePart",
+      params: {
+        part_id: 1,
+      },
+    };
+    return jsonRequest("/api/", data).should.be.fulfilled
+      .and.should.eventually
+      .have.property('result')
+      .with.have.property('part')
       .include({song_id: 1,
-                part_id: 2,
-                name: "ギター",
-                entry_name: "ほげほげ",
-                instrument_name: "楽器"});
+                order: 0,
+                part_id: 1});
+  });
+  it('should faild with invalid part_id', function () {
+    const data = {
+      method: "deletePart",
+      params: {
+        part_id: 100,
+      },
+    };
+    return jsonRequest("/api/", data).should.be.rejected;
   });
 });
