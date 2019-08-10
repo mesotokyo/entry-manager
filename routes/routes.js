@@ -110,6 +110,7 @@ exports.createComment = async function createComment(req, res, next) {
     await model.createLog({user_id: params.user_id,
                      target_id: comment.comment_id,
                      action: "create_comment"});
+    comment.create_time = _dateTimeToLocal(comment.create_time);
     res.json({result: { comment: comment } });
   } catch (err) {
     if (err.code && err.code === 'SQLITE_CONSTRAINT') {
@@ -126,7 +127,7 @@ exports.getComments = async function getComments(req, res, next) {
   try {
     const comments = await model.getComments(params.song_id);
     const count = await model.countComments(params.sond_id);
-    
+
     for (const comment of comments) {
       comment.create_time = _dateTimeToLocal(comment.create_time);
       comment.update_time = _dateTimeToLocal(comment.update_time);

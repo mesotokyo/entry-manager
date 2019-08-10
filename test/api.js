@@ -299,35 +299,6 @@ describe('createComment', function () {
   });
 });
 
-describe('getComments', function () {
-  it('should succeed', function () {
-    const data = {
-      method: "getComments",
-      params: {
-        song_id: 1,
-      },
-    };
-    return jsonRequest("/api/", data).should.be.fulfilled
-      .and.should.eventually
-      .have.property('result')
-      .with.have.property('comments')
-      .with.lengthOf.above(0);
-  });
-  it('should succeed with no song_id', function () {
-    const data = {
-      method: "getComments",
-      params: {
-      },
-    };
-    return jsonRequest("/api/", data).should.be.fulfilled
-      .and.should.eventually
-      .have.property('result')
-      .with.have.property('comments')
-      .with.lengthOf.above(0);
-  });
-});
-
-
 describe('deleteComment', function () {
   it('should succeed', function () {
     const data = {
@@ -344,7 +315,7 @@ describe('deleteComment', function () {
   });
   it('should fail to invalid id', function () {
     const data = {
-      method: "deleteEntry",
+      method: "deleteComment",
       params: {
         comment_id: 10,
       },
@@ -353,6 +324,46 @@ describe('deleteComment', function () {
   });
 });
 
+describe('getComments', function () {
+  it('should succeed', function () {
+    const data = {
+      method: "getComments",
+      params: {
+        song_id: 1,
+      },
+    };
+    return jsonRequest("/api/", data).should.be.fulfilled
+      .and.should.eventually
+      .have.property('result')
+      .with.have.property('comments')
+      .with.lengthOf(1);
+  });
+  it('no comments when no comment', function () {
+    const data = {
+      method: "getComments",
+      params: {
+        song_id: 2,
+      },
+    };
+    return jsonRequest("/api/", data).should.be.fulfilled
+      .and.should.eventually
+      .have.property('result')
+      .with.have.property('comments')
+      .with.lengthOf(0);
+  });
+  it('should succeed with no song_id', function () {
+    const data = {
+      method: "getComments",
+      params: {
+      },
+    };
+    return jsonRequest("/api/", data).should.be.fulfilled
+      .and.should.eventually
+      .have.property('result')
+      .with.have.property('comments')
+      .with.lengthOf(2);
+  });
+});
 
 describe('addPart', function () {
   it('should return result', function () {

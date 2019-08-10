@@ -114,10 +114,14 @@ Vue.component('song-details-dialog', {
              message: "",
            };
   },
-  props: { status: Object },
+  props: {
+    status: Object,
+    isLoading: Boolean,
+  },
   methods: {
     hide: function () {
       this.status.onDetails = false;
+      this.message = "";
       if (this.succeed) {
         this.succeed = false;
         this.locked = false;
@@ -162,7 +166,28 @@ Vue.component('song-details-dialog', {
         c.$emit("request-done");
       });
     },
-    apply: function () {
+    updateDetail: function () {
+    },
+    postComment: function () {
+      this.busy = true;
+      this.locked = true;
+      var c = this;
+      var data = { author: this.author,
+                   comment: this.comment,
+                   song_id: this.status.target.song.song_id };
+      var comments = this.status.target.song.comments;
+      sendRequest("createComment", data, function (err, resp) {
+        c.busy = false;
+        c.locked = false;
+        if (err) {
+          c.message = "request_error";
+          return;
+        }
+        c.comment = "";
+        comments.push(resp.result.comment);
+        c.message = "comment_post_done";
+        c.$emit("request-done");
+      });
     },
   }
 });
@@ -340,6 +365,7 @@ var app = new Vue({
     logs: [],
     totalLogs: 0,
     isLoadingLogs: false,
+    isLoadingComments: false,
 
     error: "",
     
@@ -407,6 +433,15 @@ var app = new Vue({
     showDetails: function (song) {
       this.status.onDetails = true;
       this.status.target.song = song;
+      if (!song.comments) {
+        var data = { song_id: song.song_id };
+        var c = this;
+        this.isLoadingComments = true;
+        sendRequest("getComments", data, (err, resp) => {
+          this.isLoadingComments = false;
+          c.$set(song, "comments", resp.result.comments);
+        });
+      }
     }
   },
   created: function created() {

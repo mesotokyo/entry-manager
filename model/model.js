@@ -1,5 +1,6 @@
 const config = require('../config');
 const pSqlite3 = require('./promised-sqlite3');
+const moment = require('moment');
 
 exports.getOrCreateUser = function getOrCreateUser(params) {
   if (params.name === undefined || !params.name.length) {
@@ -390,6 +391,7 @@ exports.createComment = function createComment(params) {
         return Promise.reject("comment_create_failed");
       }
       params.comment_id = result.lastID;
+      params.create_time = moment.utc().format("YYYY-MM-DD HH:mm:ss");
       return Promise.resolve(params);
     })
     .finally(() => {
@@ -438,8 +440,8 @@ exports.getComments = function getComments(song_id) {
       _db = db;
       if (song_id) {
         const sql = 'SELECT comments.*, users.name AS author FROM comments' +
-          '  LEFT JOIN users USING(user_id)' +
-          '  WHERE comments.song_id = ? AND comments.status IS NULL';
+              '  LEFT JOIN users USING(user_id)' +
+              '  WHERE comments.song_id = ? AND status IS NULL';
         return pSqlite3.runStatementAndGetAll(db, sql, song_id);
       } else {
         const sql = 'SELECT comments.*, users.name AS author FROM comments' +
@@ -459,8 +461,8 @@ exports.deleteComment = function deleteComment(commentId) {
     .then(db => {
       _db = db;
       const sql = 'UPDATE comments' +
-            '  SET status = "deleted",' +
-            '      update_time = CURRENT_TIMESTAMP' +
+            '  SET (status, update_time) =' +
+            '      ("deleted", CURRENT_TIMESTAMP)' +
             '  WHERE comment_id = ?';
       return pSqlite3.runStatement(db, sql, commentId);
     })

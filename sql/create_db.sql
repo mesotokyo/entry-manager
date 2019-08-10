@@ -42,7 +42,7 @@ CREATE TABLE IF NOT EXISTS comments (
   user_id INTEGER NOT NULL,
   comment TEXT NOT NULL,
   song_id INTEGER NOT NULL,
-  status TEXT,
+  `status` TEXT,
   create_time TEXT DEFAULT CURRENT_TIMESTAMP,
   update_time TEXT DEFAULT CURRENT_TIMESTAMP
 );

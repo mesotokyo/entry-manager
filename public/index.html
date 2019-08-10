@@ -9,6 +9,7 @@
 
     <script>var entryConfig={token:"0644d25c7f4c0ebf"};</script>
 
+    
     <script type="text/x-template" id="log-list-template">
       <div class="log-list">
         <ul class="list-group">
@@ -38,7 +39,6 @@
           </li>
         </ul>
 
-        
         <nav class="m-1" aria-label="Page navigation example">
           <ul class="pagination">
             <li class="page-item">
@@ -59,6 +59,7 @@
       </div>
     </script>
 
+    
     <script type="text/x-template" id="new-song-dialog-template">
       <div v-if="status.onSongAdd" class="modal" :class="{show: status.onSongAdd}" tabindex="-1" role="dialog" @click="hide()">
         <div class="modal-dialog" role="document" @click.stop="">
@@ -139,7 +140,6 @@
       </div>
     </script>
 
-
     
     <script type="text/x-template" id="new-entry-dialog-template">
       <div v-if="status.onEntry" class="modal" :class="{show: status.onEntry}" tabindex="-1" role="dialog" @click="hide()">
@@ -187,6 +187,7 @@
       </div>
     </script>
 
+    
     <script type="text/x-template" id="song-details-dialog-template">
       <div v-if="status.onDetails" class="modal" :class="{show: status.onDetails}" tabindex="-1" role="dialog" @click="hide()">
         <div class="modal-dialog" role="document" @click.stop="">
@@ -203,6 +204,7 @@
               <p>リクエスト主：<span class="font-weight-bold" v-text="status.target.song.author"></span></p>
               <p>追加日時：<span class="font-weight-bold" v-text="status.target.song.create_time"></span></p>
               <p>URL：<span class="font-weight-bold" v-text="status.target.song.url"></span></p>
+              <p>備考：<span class="font-weight-bold" v-text="status.target.song.comment"></span></p>
               <p>募集パートとエントリー状況：</p>
               <table class="table">
                 <thead>
@@ -233,42 +235,49 @@
                   </tr>
                 </tbody>
               </table>
-              <p>コメント：</p>
+
+              <p>コメント：<img src="/loading.gif" v-show="isLoading"></p>
               <div class="form-group">
                 <div class="list-group">
-                  <div class="list-group-item">
+                  <div class="list-group-item"
+                       v-for="comment in status.target.song.comments">
                     <div>
                       <h6>
-                        <span class="font-weight-bold" v-text="status.target.song.author"></span>
+                        <span class="font-weight-bold" v-text="comment.author"></span>
                         <small class="sm text-muted">
-                          （<span v-text="status.target.song.create_time"></span>）                      </small>：
+                          （<span v-text="comment.create_time"></span>）                      </small>：
                       </h6>
                     </div>
-                    <p class="mb-1" v-text="status.target.song.comment"></p>
+                    <p class="mb-1" v-text="comment.comment"></p>
                   </div>
                 </div>
               </div>
               <div class="form-group">
                 <label for="new-song-author">お名前：</label>
-                <small id="new-song-author-help" class="form-text text-muted">投稿者名（必須）</small>
-                <input type="input" class="form-control" id="new-song-author" aria-describedby="new-song-ref-help" placeholder="あなたのお名前" v-model="author">
+                <small id="new-song-author-help" class="form-text text-muted">投稿者名を入力（必須）</small>
+                <input type="input" class="form-control" id="new-song-author" aria-describedby="new-song-ref-help" :disabled="locked" placeholder="あなたのお名前" v-model="author">
               </div>
 
               <div class="form-group">
                 <label for="new-song-author">コメント：</label>
-                <small id="new-song-author-help" class="form-text text-muted">コメントを入力</small>
-                <textarea class="form-control" id="new-song-comment" aria-describedby="new-song-comment-help" placeholder="コメント" v-model="comment"></textarea>
+                <small id="new-song-author-help" class="form-text text-muted">コメントを入力（必須）</small>
+                <textarea class="form-control" id="new-song-comment" aria-describedby="new-song-comment-help" :disabled="locked" placeholder="コメント" v-model="comment"></textarea>
               </div>
 
               <div class="form-group">
-                <button type="button" :disabled="locked" class="btn btn-primary" @click="apply">コメントを追加</button>
+                <button type="button" :disabled="locked" class="btn btn-primary" @click="postComment">コメントを追加</button>
               </div>
+            </div>
+
+            <div class="alert alert-warning" v-if="message">
+              <span v-if="message='comment_post_done'">投稿が完了しました</span>
+              <span v-else v-text="message"></span>
             </div>
 
             <div class="modal-footer">
               <img src="/loading.gif" v-show="busy">
               <button @click="hide()" type="button" class="btn btn-secondary" data-dismiss="modal">閉じる</button>
-              <button type="button" :disabled="locked" class="btn btn-primary" @click="apply">曲情報を編集</button>
+              <button type="button" :disabled="locked" class="btn btn-primary" @click="updateDetail">曲情報を編集</button>
             </div>
           </div>
         </div>
@@ -315,6 +324,7 @@
       </div>
     </script><!-- end of "song-list-template" -->
 
+    
   </head>
   <body>
     <div id="main-frame">
@@ -346,6 +356,7 @@
         更新履歴
         <span v-show="isLoadingLogs"><img src="/loading.gif"></span>
       </h2>
+
       <div class="log-list-wrap">
         <log-list :logs="logs"
                   :total-logs="totalLogs"
@@ -354,12 +365,13 @@
       </div>
 
       <footer class="footer">
-        <div>
+        <div class="text-center">
           generated by <a href="https://github.com/mesotokyo/entry-asp">entry-asp</a>
         </div>
       </footer>
 
       <song-details-dialog :status="status"
+                           :is-loading="isLoadingComments"
                        @request-done="updateContents">
       </song-details-dialog>
       <new-song-dialog :status="status"
