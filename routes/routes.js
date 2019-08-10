@@ -120,6 +120,23 @@ exports.createComment = async function createComment(req, res, next) {
   }
 };
 
+exports.getComments = async function getComments(req, res, next) {
+  const params = req.body.params;
+
+  try {
+    const comments = await model.getComments(params.song_id);
+    const count = await model.countComments(params.sond_id);
+    
+    for (const comment of comments) {
+      comment.create_time = _dateTimeToLocal(comment.create_time);
+      comment.update_time = _dateTimeToLocal(comment.update_time);
+    }
+    res.json({ result: { comments: comments, total_comments: count.count } });
+  } catch (err) {
+    res.json({ error: { code: -32603, message: err.toString() } });
+  }
+};
+
 exports.deleteComment = async function deleteComment(req, res, next) {
   const params = req.body.params || {};
   
@@ -143,7 +160,7 @@ exports.deleteComment = async function deleteComment(req, res, next) {
     }
     await model.createLog({user_id: comment.user_id,
                            target_id: comment.comment_id,
-                           action: "delete_entry"});
+                           action: "delete_comment"});
     res.json({ result: { comment: comment }});
   } catch (err) {
     res.json({ code: -32603, message: err.toString() });
@@ -231,7 +248,6 @@ exports.updateSong = async function updateSong(req, res, next) {
       res.json({error: ERROR_CONSTRAINT_VIOLATION});
       return;
     }
-    console.error(err);
     res.json({error: {code: -32603, message: err}});
   }
 
@@ -305,7 +321,7 @@ exports.deletePart = async function deletePart(req, res, next) {
   
 };
 
-exports.listSongs = async function listSongs(req, res, next) {
+exports.getSongs = async function getSongs(req, res, next) {
   const params = req.body.params;
 
   try {
@@ -316,7 +332,60 @@ exports.listSongs = async function listSongs(req, res, next) {
     }
     res.json({ result: { songs: songs } });
   } catch (err) {
-    res.json({ error: { code: -32603, message: err } });
+    res.json({ error: { code: -32603, message: err.toString() } });
   }
 };
   
+exports.getLogs = async function listLogs(req, res, next) {
+  const params = req.body.params;
+
+  try {
+    const logs = await model.getLogs(params);
+    const count = await model.countLogs();
+
+    const songs = await model.getSongs();
+    let songById = {};
+    for (const song of songs) {
+      songById[song.song_id] = song;
+    }
+
+    const parts = await model.getParts();
+    let partById = {};
+    for (const part of parts) {
+      partById[part.part_id] = part;
+    }
+
+    const comments = await model.getComments();
+    let commentById = {};
+    for (const comment of comments) {
+      commentById[comment.comment_id] = comment;
+    }
+
+    for (const log of logs) {
+      if (log.action == "create_entry"
+          || log.action == "delete_entry"
+          || log.action == "add_part"
+          || log.action == "delete_part") {
+        const part = partById[log.target_id];
+        log.target_names = [
+          songById[part.song_id].title,
+          part.part_name
+        ];
+      } else if (log.action == "create_comment"
+                 || log.action == "delete_comment") {
+        const comment = commentById[log.target_id];
+        log.target_names = [
+          songById[comment.song_id].title
+        ];
+      } else if (log.action == "create_song"
+                 || log.action == "update_song") {
+        const song = songById[log.target_id];
+        log.target_names = [ song.title ];
+      }
+      log.timestamp = _dateTimeToLocal(log.timestamp);
+    }
+    res.json({ result: { logs: logs, total_logs: count.count } });
+  } catch (err) {
+    res.json({ error: { code: -32603, message: err.toString() } });
+  }
+};

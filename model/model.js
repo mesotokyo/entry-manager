@@ -54,17 +54,20 @@ exports.createUser = function createUser(params) {
 };
 
 exports.getParts = function getParts(params) {
-  if (params.song_id === undefined) {
-    return Promise.reject("no_song_id");
-  }
-
+  params = params || {};
   let _db;
   return pSqlite3.connect(config)
     .then(db => {
       _db = db;
-      const sql = 'SELECT * FROM parts WHERE song_id = ?' +
-            '  ORDER BY `order` ASC';
-      return pSqlite3.runStatementAndGetAll(db, sql, params.song_id);
+      let sql;
+      if (params.song_id) {
+        sql = 'SELECT * FROM parts WHERE song_id = ? AND status IS NULL' +
+          '  ORDER BY `order` ASC';
+        return pSqlite3.runStatementAndGetAll(db, sql, params.song_id);
+      } else {
+        sql = 'SELECT * FROM parts';
+        return pSqlite3.runStatementAndGetAll(db, sql);
+      }
     })
     .finally(() => {
       _db.close();
@@ -263,7 +266,7 @@ exports.deletePart = function deletePart(partId) {
         return Promise.reject("part_has_player");
       }
       _part = part;
-      const sql = 'DELETE FROM parts WHERE part_id = ?';
+      const sql = 'UPDATE parts SET status = "deleted" WHERE part_id = ?';
       return pSqlite3.runStatement(_db, sql, part.part_id);
     })
     .then(result => {
@@ -316,7 +319,8 @@ exports.getSongs = function getSongs() {
       _songs = rows;
       const sql = 'SELECT parts.*, users.name AS entry_name' +
             '  FROM parts' +
-            '  LEFT JOIN users USING(user_id)';
+            '  LEFT JOIN users USING(user_id)' +
+            '  WHERE parts.status IS NULL';
       return pSqlite3.runStatementAndGetAll(_db, sql);
       })
     .then(rows => {
@@ -408,15 +412,40 @@ exports.getComment = function getComment(comment_id) {
     });
 };
 
+exports.countComments = function countComments(song_id) {
+  let _db;
+  return pSqlite3.connect(config)
+    .then(db => {
+      _db = db;
+      if (song_id) {
+        const sql = 'SELECT COUNT(comment_id) AS count FROM comments' +
+              '  WHERE comments.song_id = ?';
+        return pSqlite3.runStatementAndGet(db, sql, song_id);
+      } else {
+        const sql = 'SELECT COUNT(comment_id) AS count FROM comments';
+        return pSqlite3.runStatementAndGet(db, sql);
+      }
+    })
+    .finally(() => {
+      _db.close();
+    });
+};
+
 exports.getComments = function getComments(song_id) {
   let _db;
   return pSqlite3.connect(config)
     .then(db => {
       _db = db;
-      const sql = 'SELECT comments.*, users.name AS author FROM comments' +
-            '  LEFT JOIN users USING(user_id)' +
-            '  WHERE comments.song_id = ? AND comments.status IS NULL';
-      return pSqlite3.runStatementAndGetAll(db, sql, song_id);
+      if (song_id) {
+        const sql = 'SELECT comments.*, users.name AS author FROM comments' +
+          '  LEFT JOIN users USING(user_id)' +
+          '  WHERE comments.song_id = ? AND comments.status IS NULL';
+        return pSqlite3.runStatementAndGetAll(db, sql, song_id);
+      } else {
+        const sql = 'SELECT comments.*, users.name AS author FROM comments' +
+          '  LEFT JOIN users USING(user_id)';
+        return pSqlite3.runStatementAndGetAll(db, sql);
+      }
     })
     .finally(() => {
       _db.close();
@@ -459,6 +488,39 @@ exports.createLog = function createLog(params) {
       }
       params.log_id = result.lastID;
       return Promise.resolve(params);
+    })
+    .finally(() => {
+      _db.close();
+    });
+};
+
+exports.getLogs = function getLogs(params) {
+  let _db;
+  params.limit = params.limit || 100;
+  params.offset = params.offset || 0;
+  
+  return pSqlite3.connect(config)
+    .then(db => {
+      _db = db;
+      const sql = 'SELECT * FROM logs' +
+            '        LEFT JOIN users USING(user_id)' +
+            '        ORDER BY timestamp DESC LIMIT ? OFFSET ?';
+      return pSqlite3.runStatementAndGetAll(db, sql,
+                                            params.limit,
+                                            params.offset);
+    })
+    .finally(() => {
+      _db.close();
+    });
+};
+
+exports.countLogs = function countLogs() {
+  let _db;
+  return pSqlite3.connect(config)
+    .then(db => {
+      _db = db;
+      const sql = 'SELECT COUNT(log_id) AS count FROM logs';
+        return pSqlite3.runStatementAndGet(db, sql);
     })
     .finally(() => {
       _db.close();

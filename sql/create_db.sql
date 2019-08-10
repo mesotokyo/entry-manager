@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS parts (
   part_name TEXT NOT NULL,
   `order` INTEGER NOT NULL,
   user_id INTEGER,
-  instrument_name TEXT
+  instrument_name TEXT,
+  status TEXT
 );
 
 CREATE TABLE IF NOT EXISTS users (

@@ -30,6 +30,8 @@ Vue.component('song-list', {
   template: '#song-list-template',
   props: {
     songs: Array,
+    totalSongs: Number,
+    isLoading: Boolean,
   },
   methods: {
     entry: function (song, part) {
@@ -37,6 +39,66 @@ Vue.component('song-list', {
     },
     showDetails: function (song) {
       this.$emit("show-details", song);
+    },
+  }
+});
+
+Vue.component('log-list', {
+  template: '#log-list-template',
+  props: {
+    logs: Array,
+    totalLogs: Number,
+  },
+  data: function () {
+    return {
+      pages: [],
+      currentPage: 1,
+      currentLogs: [],
+      totalPage: 1,
+      unit: 10
+    };
+  },
+  watch: {
+    logs: function (val, oldVal) {
+      this.updateLogs();
+    },
+    totalLogs: function (val, oldVal) {
+      this.totalPage = Math.floor((val + -1) / 10) + 1;
+      this.pages.splice(0, this.pages.length);
+      for (var i = 1; i <= this.totalPage; i++) {
+        this.pages.push(i);
+      }
+    }
+  },
+  methods: {
+    updateLogs: function() {
+      this.currentLogs.splice(0, this.currentLogs.length);
+      var begin = (this.currentPage - 1) * this.unit;
+      for (var i = 0; i < this.unit; i++) {
+        if (this.logs[begin + i] == undefined) {
+          break;
+        }
+        this.currentLogs.push(this.logs[begin + i]);
+      }
+    },
+    toPage: function (num) {
+      this.currentPage = num;
+      var index = (this.currentPage - 1) * this.unit;
+      if (index > this.logs.length) {
+        this.$emit("loadLogs", index);
+        return;
+      }
+      this.updateLogs();
+    },
+    nextPage: function () {
+      if (this.currentPage < this.totalPage) {
+        this.toPage(this.currentPage + 1);
+      }
+    },
+    prevPage: function () {
+      if (this.currentPage > 1) {
+        this.toPage(this.currentPage - 1);
+      }
     },
   }
 });
@@ -49,6 +111,7 @@ Vue.component('song-details-dialog', {
              succeed: false,
              comment: "",
              author: "",
+             message: "",
            };
   },
   props: { status: Object },
@@ -59,6 +122,45 @@ Vue.component('song-details-dialog', {
         this.succeed = false;
         this.locked = false;
       }
+    },
+    deleteEntry: function (part) {
+      this.busy = true;
+      var c = this;
+      var parts = this.status.target.song.parts;
+      if (!window.confirm("本当に取り消しますか？")) {
+        return;
+      }
+      sendRequest("deleteEntry", part, function (err, resp) {
+        c.busy = false;
+        if (err) {
+          c.message = "request_error";
+          return;
+        }
+        part.entry_name = "";
+        c.$emit("request-done");
+      });
+    },
+    deletePart: function (part) {
+      this.busy = true;
+      var c = this;
+      var parts = this.status.target.song.parts;
+      if (!window.confirm("本当に削除しますか？")) {
+        return;
+      }
+      sendRequest("deletePart", part, function (err, resp) {
+        c.busy = false;
+        if (err) {
+          c.message = "request_error";
+          return;
+        }
+        for (var i = 0; i < parts.length; i++) {
+          if (parts[i].part_id == part.part_id) {
+            parts.splice(i, 1);
+            break;
+          }
+        }
+        c.$emit("request-done");
+      });
     },
     apply: function () {
     },
@@ -91,7 +193,7 @@ Vue.component('new-entry-dialog', {
         song_id: this.status.target.song.song_id,
         part_id: this.status.target.part.part_id,
         name: this.name,
-        inst_name: this.instName
+        instrument_name: this.instName
       };
 
       this.busy = true;
@@ -233,12 +335,25 @@ var app = new Vue({
                 song: {} },
     },
     songs: [],
+    isLoadingSongs: false,
+
+    logs: [],
+    totalLogs: 0,
+    isLoadingLogs: false,
+
     error: "",
+    
   },
   methods: {
+    updateContents: function () {
+      this.updateSongList();
+      this.updateLogList();
+    },
     updateSongList: function () {
       // load song list
-      sendRequest("listSongs", {}, (err, resp) => {
+      this.isLoadingSongs = true;
+      sendRequest("getSongs", {}, (err, resp) => {
+        this.isLoadingSongs = false;
         if (err || resp.error) {
           console.log(resp);
           if (resp.error && resp.error.code == -32200) {
@@ -254,6 +369,36 @@ var app = new Vue({
         }
       });
     },
+    updateLogList: function (index) {
+      // load song list
+      this.isLoadingLogs = true;
+      var loadUnit = 100;
+      var data = { limit: loadUnit };
+      if (index) {
+        var need = (index - this.logs.length);
+        while (data.limit < need) {
+          data.limit += loadUnit;
+        }
+        data.offset = this.logs.length;
+      };
+      sendRequest("getLogs", data, (err, resp) => {
+        this.isLoadingLogs = false;
+        if (err || resp.error) {
+          console.log(resp);
+          if (resp.error && resp.error.code == -32200) {
+            this.error = "invalid_token";
+            return;
+          }
+          this.error = "list_logs_failed";
+          return;
+        }
+        this.logs.splice(0, this.logs.length);
+        for (var log of resp.result.logs) {
+          this.logs.push(log);
+        }
+        this.totalLogs = resp.result.total_logs;
+      });
+    },
     entry: function (song, part) {
       this.status.onEntry = true;
       this.status.target.part = part;
@@ -266,6 +411,7 @@ var app = new Vue({
   },
   created: function created() {
     this.updateSongList();
+    this.updateLogList(1);
   },
 });
 

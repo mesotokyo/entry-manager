@@ -246,10 +246,10 @@ describe('deleteEntry', function () {
   });
 });
 
-describe('listSongs', function () {
+describe('getSongs', function () {
   it('should return result', function () {
     const data = {
-      method: "listSongs",
+      method: "getSongs",
       params: {},
     };
     return jsonRequest("/api/", data).should.be.fulfilled
@@ -280,7 +280,53 @@ describe('createComment', function () {
                 comment: data.params.comment})
       .and.have.property('comment_id');
   });
+  it('should return result', function () {
+    const data = {
+      method: "createComment",
+      params: {
+        song_id: 1,
+        author: "ほげほげ2名",
+        comment: "コメントbbb",
+      },
+    };
+    return jsonRequest("/api/", data).should.be.fulfilled
+      .and.should.eventually
+      .have.property('result')
+      .with.have.property('comment')
+      .include({song_id: data.params.song_id,
+                comment: data.params.comment})
+      .and.have.property('comment_id');
+  });
 });
+
+describe('getComments', function () {
+  it('should succeed', function () {
+    const data = {
+      method: "getComments",
+      params: {
+        song_id: 1,
+      },
+    };
+    return jsonRequest("/api/", data).should.be.fulfilled
+      .and.should.eventually
+      .have.property('result')
+      .with.have.property('comments')
+      .with.lengthOf.above(0);
+  });
+  it('should succeed with no song_id', function () {
+    const data = {
+      method: "getComments",
+      params: {
+      },
+    };
+    return jsonRequest("/api/", data).should.be.fulfilled
+      .and.should.eventually
+      .have.property('result')
+      .with.have.property('comments')
+      .with.lengthOf.above(0);
+  });
+});
+
 
 describe('deleteComment', function () {
   it('should succeed', function () {
@@ -306,6 +352,7 @@ describe('deleteComment', function () {
     return jsonRequest("/api/", data).should.be.rejected;
   });
 });
+
 
 describe('addPart', function () {
   it('should return result', function () {
@@ -362,5 +409,18 @@ describe('deletePart', function () {
       },
     };
     return jsonRequest("/api/", data).should.be.rejected;
+  });
+});
+
+describe('getLogs', function () {
+  it('should return result', function () {
+    const data = {
+      method: "getLogs",
+      params: {}
+    };
+    return jsonRequest("/api/", data).should.be.fulfilled
+      .and.should.eventually
+      .have.property('result')
+      .with.have.property('logs');
   });
 });
