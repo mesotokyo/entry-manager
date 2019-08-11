@@ -60,12 +60,13 @@
     </script>
 
     
-    <script type="text/x-template" id="new-song-dialog-template">
-      <div v-if="status.onSongAdd" class="modal" :class="{show: status.onSongAdd}" tabindex="-1" role="dialog" @click="hide()">
+    <script type="text/x-template" id="edit-song-dialog-template">
+      <div v-if="state.onSongEdit" class="modal" :class="{show: state.onSongEdit}" tabindex="-1" role="dialog" @click="hide()">
         <div class="modal-dialog" role="document" @click.stop="">
           <div class="modal-content">
             <div class="modal-header">
-              <h5 class="modal-title">曲の追加</h5>
+              <h5 v-if="mode == 'create'" class="modal-title">曲の追加</h5>
+              <h5 v-else-if="mode == 'edit'" class="modal-title">曲情報の編集</h5>
               <button type="button"  @click="hide()" class="close" data-dismiss="modal" aria-label="Close">
                 <span aria-hidden="true">&times;</span>
               </button>
@@ -74,19 +75,19 @@
               <div class="form-group">
                 <label for="new-song-name">曲名：</label>
                 <small id="new-song-name-help" class="form-text text-muted">追加したい曲名を入力（必須）</small>
-                <input type="input" class="form-control" id="new-song-name" aria-describedby="new-song-name-help" placeholder="曲名" v-model="title">
+                <input type="input" class="form-control" :disabled="locked" id="new-song-name" aria-describedby="new-song-name-help" placeholder="曲名" v-model="title">
               </div>
               
               <div class="form-group">
                 <label for="new-song-ref">出典：</label>
                 <small id="new-song-ref-help" class="form-text text-muted">曲の出典（アーティスト名、アルバム名など）を入力（必須）</small>
-                <input type="input" class="form-control" id="new-song-ref" aria-describedby="new-song-name-help" placeholder="出典" v-model="reference">
+                <input type="input" class="form-control"  :disabled="locked"id="new-song-ref" aria-describedby="new-song-name-help" placeholder="出典" v-model="reference">
               </div>
               
               <div class="form-group">
                 <label for="new-song-url">参考URL：</label>
                 <small id="new-song-url-help" class="form-text text-muted">参考URLを入力</small>
-                <input type="input" class="form-control" id="new-song-url" aria-describedby="new-song-url-help" placeholder="URL" v-model="url">
+                <input type="input" class="form-control" :disabled="locked" id="new-song-url" aria-describedby="new-song-url-help" placeholder="URL" v-model="url">
               </div>
               
               <div class="form-group">
@@ -95,28 +96,43 @@
 
                 <div class="form-group form-row" v-for="part in parts">
                   <div class="col">
-                    <input type="input" class="form-control" aria-describedby="new-song-url-help" placeholder="パート" v-model="part.part_name">
+                    <input type="input" class="form-control" :disabled="locked || part.user_id" aria-describedby="new-song-url-help" placeholder="パート" v-model="part.part_name">
                   </div>
                   <div class="col">
-                    <button type="button" class="btn btn-danger" @click="deletePart(part)">削除</button>
+                    <select class="form-control" :disabled="locked"
+                            v-model="part.required">
+                      <option value="0">任意</option>
+                      <option value="1">必須</option>
+                    </select>
+                  </div>
+                  <div class="col">
+                    <button type="button" class="btn btn-danger"
+                            :disabled="parts.length == 1 || locked || part.user_id"
+                            @click="deletePart(part)">削除</button>
                   </div>
                 </div>
                 
-                <button type="button" class="btn btn-info" @click="addPart">入力欄を追加</button>
+                <button type="button" class="btn btn-info" :disabled="locked" @click="addPart">入力欄を追加</button>
+              </div>
+              <div class="alert alert-info" v-if="mode == 'edit' && showDeletePartAlert" >
+                ※エントリー済みのパートは削除/編集できません。先にエントリーを取り消してください。
               </div>
                 
               <div class="form-group">
                 <label for="new-song-author">リクエスト者名：</label>
                 <small id="new-song-author-help" class="form-text text-muted">リクエスト主を入力（必須）</small>
-                <input type="input" class="form-control" id="new-song-author" aria-describedby="new-song-ref-help" placeholder="あなたのお名前" v-model="author">
+                <input type="input" class="form-control" :disabled="locked || mode == 'edit'" id="new-song-author" aria-describedby="new-song-ref-help" placeholder="あなたのお名前" v-model="author">
               </div>
 
               <div class="form-group">
-                <label for="new-song-author">コメント：</label>
+                <label for="new-song-author">備考：</label>
                 <small id="new-song-author-help" class="form-text text-muted">注意点や指示、コメントなどを入力</small>
-                <textarea class="form-control" id="new-song-comment" aria-describedby="new-song-comment-help" placeholder="コメント" v-model="comment"></textarea>
+                <textarea class="form-control" id="new-song-comment" :disabled="locked" aria-describedby="new-song-comment-help" placeholder="コメント" v-model="comment"></textarea>
               </div>
               
+              <div class="alert alert-info" v-show="succeed">
+                登録が完了しました
+              </div>
               <div class="alert alert-warning" v-show="message.length">
                 エラー：
                 <span v-if="message == 'no_title'">曲名を入力してください</span>
@@ -133,7 +149,8 @@
             <div class="modal-footer">
               <img src="/loading.gif" v-show="busy">
               <button @click="hide()" type="button" class="btn btn-secondary" data-dismiss="modal">閉じる</button>
-              <button type="button" class="btn btn-primary" @click="apply">この内容で追加</button>
+              <button v-if="mode == 'create'" type="button" class="btn btn-primary" :disabled="locked" @click="postNewSong">この内容で追加</button>
+              <button v-if="mode == 'edit'" type="button" class="btn btn-primary" :disabled="locked" @click="postNewSong">保存</button>
             </div>
           </div>
         </div>
@@ -142,7 +159,7 @@
 
     
     <script type="text/x-template" id="new-entry-dialog-template">
-      <div v-if="status.onEntry" class="modal" :class="{show: status.onEntry}" tabindex="-1" role="dialog" @click="hide()">
+      <div v-if="state.onEntry" class="modal" :class="{show: state.onEntry}" tabindex="-1" role="dialog" @click="hide()">
         <div class="modal-dialog" role="document" @click.stop="">
           <div class="modal-content">
             <div class="modal-header">
@@ -152,9 +169,9 @@
               </button>
             </div>
             <div class="modal-body">
-              <p>曲名：<span class="font-weight-bold" v-text="status.target.song.title"></span></p>
-              <p>出典：<span class="font-weight-bold" v-text="status.target.song.reference"></span></p>
-              <p>パート：<span class="font-weight-bold" v-text="status.target.part.part_name"></span></p>
+              <p>曲名：<span class="font-weight-bold" v-text="state.target.song.title"></span></p>
+              <p>出典：<span class="font-weight-bold" v-text="state.target.song.reference"></span></p>
+              <p>パート：<span class="font-weight-bold" v-text="state.target.part.part_name"></span></p>
               
               <div class="form-group">
                 <label for="new-entry-name">名前：</label>
@@ -189,7 +206,7 @@
 
     
     <script type="text/x-template" id="song-details-dialog-template">
-      <div v-if="status.onDetails" class="modal" :class="{show: status.onDetails}" tabindex="-1" role="dialog" @click="hide()">
+      <div v-if="state.onShowDetails" class="modal" :class="{show: state.onShowDetails}" tabindex="-1" role="dialog" @click="hide()">
         <div class="modal-dialog" role="document" @click.stop="">
           <div class="modal-content">
             <div class="modal-header">
@@ -199,12 +216,12 @@
               </button>
             </div>
             <div class="modal-body">
-              <p>曲名：<span class="font-weight-bold" v-text="status.target.song.title"></span></p>
-              <p>出典：<span class="font-weight-bold" v-text="status.target.song.reference"></span></p>
-              <p>リクエスト主：<span class="font-weight-bold" v-text="status.target.song.author"></span></p>
-              <p>追加日時：<span class="font-weight-bold" v-text="status.target.song.create_time"></span></p>
-              <p>URL：<span class="font-weight-bold" v-text="status.target.song.url"></span></p>
-              <p>備考：<span class="font-weight-bold" v-text="status.target.song.comment"></span></p>
+              <p>曲名：<span class="font-weight-bold" v-text="state.target.song.title"></span></p>
+              <p>出典：<span class="font-weight-bold" v-text="state.target.song.reference"></span></p>
+              <p>リクエスト主：<span class="font-weight-bold" v-text="state.target.song.author"></span></p>
+              <p>追加日時：<span class="font-weight-bold" v-text="state.target.song.create_time"></span></p>
+              <p>URL：<a :href="state.target.song.url" class="font-weight-bold" v-text="state.target.song.url"></span></p>
+              <p>備考：<span class="font-weight-bold" v-text="state.target.song.comment"></span></p>
               <p>募集パートとエントリー状況：</p>
               <table class="table">
                 <thead>
@@ -216,7 +233,7 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="part in status.target.song.parts">
+                  <tr v-for="part in state.target.song.parts">
                     <td v-text="part.part_name"></td>
                     <td v-text="part.entry_name"></td>
                     <td v-text="part.instrument_name"></td>
@@ -225,11 +242,6 @@
                               class="btn btn-outline-danger btn-sm"
                               @click="deleteEntry(part)" v-if="part.entry_name">
                         エントリーを取り消す
-                      </button>
-                      <button type="button"
-                              class="btn btn-outline-danger btn-sm"
-                              @click="deletePart(part)" v-else>
-                        このパートを削除
                       </button>
                     </td>
                   </tr>
@@ -240,7 +252,7 @@
               <div class="form-group">
                 <div class="list-group">
                   <div class="list-group-item"
-                       v-for="comment in status.target.song.comments">
+                       v-for="comment in state.target.song.comments">
                     <div>
                       <h6>
                         <span class="font-weight-bold" v-text="comment.author"></span>
@@ -269,15 +281,21 @@
               </div>
             </div>
 
+            <div class="alert alert-warning" v-if="succeed">
+              投稿が完了しました
+            </div>
+
             <div class="alert alert-warning" v-if="message">
-              <span v-if="message='comment_post_done'">投稿が完了しました</span>
+              エラー：
+              <span v-if="message == 'no_comment'">コメントを入力してください</span>
+              <span v-else-if="message == 'no_author'">お名前を入力してください</span>
               <span v-else v-text="message"></span>
             </div>
 
             <div class="modal-footer">
               <img src="/loading.gif" v-show="busy">
               <button @click="hide()" type="button" class="btn btn-secondary" data-dismiss="modal">閉じる</button>
-              <button type="button" :disabled="locked" class="btn btn-primary" @click="updateDetail">曲情報を編集</button>
+              <button type="button" :disabled="locked" class="btn btn-primary" @click="editDetails">曲情報を編集</button>
             </div>
           </div>
         </div>
@@ -293,25 +311,60 @@
               <th>曲情報
                 <span v-show="isLoading"><img src="/loading.gif"></span>
               </th>
-              <th>募集パート</th>
+              <th>募集パート（<span class="text-primary">※</span>マーク付きは必須パート</span>）</th>
             </tr>
           </thead>
           <tbody class="songs">
             <tr class="song" v-for="song in songs">
               <td class="song-info">
-                <div><span v-text="song.title"></span></div>
-                <div>出典：<span class="song-name" v-text="song.reference"></span></div>
-                <div>追加日時：<span class="song-name" v-text="song.update_time"></span></div>
-                <div>URL:<span class="song-name" v-text="song.url"></span></div>
-                <div>コメント：<span class="song-name" v-text="song.comment"></span></div>
+                <div class="mb-2">
+                  <span class="h5" v-text="song.title"></span>
+                  <span v-if="song.readiness" class="text-primary font-weight-bold">［成立］</span>
+                </div>
+                <div class="mb-1">
+                  出典：<span class="song-name" v-text="song.reference"></span>
+                  ［<a :href="song.url" v-if="song.url">参考リンク</a>］
+                  <span v-if="song.url_type && song.url_key">
+                    <button type="button" class="btn btn-outline-info btn-sm"
+                            @click="togglePlayer(song)"
+                            :class="{active: song._showPlayer}"
+                            >
+                      プレーヤー表示</button>
+                  </span>
+                </div>
+                <div v-if="song._showPlayer">
+                  <div v-if="song.url_type == 'youtube'">
+                    <iframe width="560" height="315"
+                            :src="'https://www.youtube.com/embed/' + song.url_key"
+                            frameborder="0" allow="autoplay; encrypted-media"
+                            allowfullscreen></iframe>
+                  </div>
+                  <div v-if="song.url_type == 'nicovideo'">
+                    <iframe allowfullscreen="allowfullscreen" allow="autoplay"
+                            frameborder="0" width="640" height="360"
+                            :src="'https://embed.nicovideo.jp/watch/' + song.url_key + '?oldScript=1from=0&amp;allowProgrammaticFullScreen=1'"
+                            style="max-width: 100%;"></iframe>
+                  </div>
+                </div>
+                <div class="mb-1">備考：
+                  <span class="song-name" v-text="song.comment"></span>
+                </div>
                 <button type="button" class="btn btn-outline-info btn-sm" @click="showDetails(song)">詳細やコメントを表示</button>
                 
               </td>
               <td>
                 <dl class="entry-list">
                   <template v-for="part in song.parts">
-                    <dt v-text="part.part_name"></dt>
-                    <dd v-if="part.entry_name" v-text="part.entry_name"></dd>
+                    <dt>
+                      <span v-text="part.part_name"></span>
+                      <sup v-if="part.required" class="text-primary">※</sup>
+                    </dt>
+                    <dd v-if="part.entry_name">
+                      <span v-text="part.entry_name"></span>
+                      <span v-if="part.instrument_name">
+                        （<span v-text="part.instrument_name"></span>）
+                      </span>
+                    </dd>
                     <dd v-else>
                       <button type="button" class="btn btn-outline-info btn-sm" @click="entry(song, part)">エントリーする</button>
                     </dd>
@@ -348,7 +401,7 @@
           <span v-else>読み込みエラーです。</span>
         </div>
         <div class="form-group">
-          <button type="button" class="btn btn-primary" @click="status.onSongAdd = !status.onSongAdd">曲を追加する</button>
+          <button type="button" class="btn btn-primary" @click="state.onSongEdit = !state.onSongEdit">曲を追加する</button>
         </div>
       </div>
 
@@ -370,14 +423,15 @@
         </div>
       </footer>
 
-      <song-details-dialog :status="status"
+      <song-details-dialog ref="songDetails" :state="state"
                            :is-loading="isLoadingComments"
+                           @edit-details="editDetails"
                        @request-done="updateContents">
       </song-details-dialog>
-      <new-song-dialog :status="status"
+      <edit-song-dialog ref="editSong" :state="state"
                        @request-done="updateContents">
-      </new-song-dialog>
-      <new-entry-dialog :status="status"
+      </edit-song-dialog>
+      <new-entry-dialog ref="newEntry" :state="state"
                         @request-done="updateContents"
                         ></news-entry-dialog>
     </div><!-- #main-frame -->

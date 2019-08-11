@@ -33,7 +33,14 @@ Vue.component('song-list', {
     totalSongs: Number,
     isLoading: Boolean,
   },
+  data: function () {
+    return {
+    };
+  },
   methods: {
+    togglePlayer: function(song) {
+      song._showPlayer = !song._showPlayer;
+    },
     entry: function (song, part) {
       this.$emit("entry", song, part);
     },
@@ -115,12 +122,12 @@ Vue.component('song-details-dialog', {
            };
   },
   props: {
-    status: Object,
+    state: Object,
     isLoading: Boolean,
   },
   methods: {
     hide: function () {
-      this.status.onDetails = false;
+      this.state.onShowDetails = false;
       this.message = "";
       if (this.succeed) {
         this.succeed = false;
@@ -130,7 +137,7 @@ Vue.component('song-details-dialog', {
     deleteEntry: function (part) {
       this.busy = true;
       var c = this;
-      var parts = this.status.target.song.parts;
+      var parts = this.state.target.song.parts;
       if (!window.confirm("本当に取り消しますか？")) {
         return;
       }
@@ -141,13 +148,14 @@ Vue.component('song-details-dialog', {
           return;
         }
         part.entry_name = "";
+        part.instrument_name = "";
         c.$emit("request-done");
       });
     },
     deletePart: function (part) {
       this.busy = true;
       var c = this;
-      var parts = this.status.target.song.parts;
+      var parts = this.state.target.song.parts;
       if (!window.confirm("本当に削除しますか？")) {
         return;
       }
@@ -166,26 +174,38 @@ Vue.component('song-details-dialog', {
         c.$emit("request-done");
       });
     },
-    updateDetail: function () {
+    editDetails: function () {
+      this.$emit("edit-details");
     },
     postComment: function () {
+      this.succeed = false;
+      if (!this.author.length) {
+        this.message = "no_author";
+        return;
+      }
+      if (!this.comment.length) {
+        this.message = "no_comment";
+        return;
+      }
+
       this.busy = true;
       this.locked = true;
       var c = this;
       var data = { author: this.author,
                    comment: this.comment,
-                   song_id: this.status.target.song.song_id };
-      var comments = this.status.target.song.comments;
+                   song_id: this.state.target.song.song_id };
+      var comments = this.state.target.song.comments;
       sendRequest("createComment", data, function (err, resp) {
         c.busy = false;
         c.locked = false;
-        if (err) {
+        if (err || resp.error) {
           c.message = "request_error";
           return;
         }
+        c.succeed = true;
         c.comment = "";
         comments.push(resp.result.comment);
-        c.message = "comment_post_done";
+        c.message = "";
         c.$emit("request-done");
       });
     },
@@ -202,11 +222,11 @@ Vue.component('new-entry-dialog', {
              succeed: false,
            };
   },
-  props: { status: Object },
+  props: { state: Object },
   template: '#new-entry-dialog-template',
   methods: {
     hide: function () {
-      this.status.onEntry = false;
+      this.state.onEntry = false;
       if (this.succeed) {
         this.succeed = false;
         this.locked = false;
@@ -215,8 +235,8 @@ Vue.component('new-entry-dialog', {
     apply: function() {
       // check parts
       var data = {
-        song_id: this.status.target.song.song_id,
-        part_id: this.status.target.part.part_id,
+        song_id: this.state.target.song.song_id,
+        part_id: this.state.target.part.part_id,
         name: this.name,
         instrument_name: this.instName
       };
@@ -248,7 +268,7 @@ Vue.component('new-entry-dialog', {
   },
 });
 
-Vue.component('new-song-dialog', {
+Vue.component('edit-song-dialog', {
   data: function () {
     return {
       title: "",
@@ -256,24 +276,64 @@ Vue.component('new-song-dialog', {
       url: "",
       author: "",
       comment: "",
-      parts: [{name:""},],
+      parts: [{part_name:"", required:0},],
       message: "",
       busy: false,
+      locked: false,
+      succeed: false,
+      mode: "create",
+      showDeletePartAlert: false,
     };
   },
-  props: { status: Object },
-  template: '#new-song-dialog-template',
+  props: { state: Object },
+  template: '#edit-song-dialog-template',
   methods: {
+    setTarget: function () {
+      this.mode = "edit";
+      var a = [ "title", "reference", "url", "author", "comment" ];
+      for (var i in a) {
+        var k = a[i];
+        this[k] = this.state.target.song[k];
+      }
+      this.parts.splice(0, this.parts.length);
+      for (i in this.state.target.song.parts) {
+        var part = this.state.target.song.parts[i];
+        var newPart = {};
+        a = ["part_id", "song_id", "part_name", "required", "user_id"];
+        for (i in a) {
+          k = a[i];
+          newPart[k] = part[k];
+        };
+        this.parts.push(newPart);
+        if (part.user_id) {
+          this.showDeletePartAlert = true;
+        }
+      }
+    },
     hide: function () {
-      this.status.onSongAdd = false
+      this.state.onSongEdit = false;
+      if (this.succeed || this.mode == "edit") {
+        this.resetAll();
+        this.mode = "create";
+      }
     },
     resetAll: function () {
-      for (var k of ["title", "reference", "url", "comment", ]) {
+      /* IE cannot support for-of
+        for (var k of ["title", "reference", "url", "comment", ]) {
+        this[k] = "";
+        }
+      */
+      var a = ["title", "reference", "url", "comment", ];
+      for (var i in a) {
+        var k = a[i];
         this[k] = "";
       }
+      
       this.busy = false;
       this.message = "";
-      this.parts.splice(0, this.parts.length, {name:""});
+      this.parts.splice(0, this.parts.length, {part_name:""});
+      this.locked = false;
+      this.succeed = false;
     },
     addPart: function () {
       this.parts.push({name: ""});
@@ -287,14 +347,26 @@ Vue.component('new-song-dialog', {
         this.parts.splice(index, 1);
       }
     },
-    apply: function () {
+    postNewSong: function () {
       // check params
+      /* IE not supports for-of
       for (var k of ["title", "reference", "author"]) {
         if (!this[k].length) {
           this.message = "no_" + k;
           return;
         }
       }
+      */
+      this.message = "";
+      var a = ["title", "reference", "author"];
+      for (var i in a) {
+        var k = a[i];
+        if (!this[k].length) {
+          this.message = "no_" + k;
+          return;
+        }
+      }
+
       if (this.url.length) {
         try {
           var parsed = new URL(this.url);
@@ -307,12 +379,14 @@ Vue.component('new-song-dialog', {
 
       // check parts
       var parts = [];
-      for (var part of this.parts) {
-        if (part.name.length == 0) {
+      // for (var part of this.parts) {
+      for (i in this.parts) {
+        var part = this.parts[i];
+        if (part.part_name.length == 0) {
           this.message = "blank_part_exists";
           return;
         }
-        parts.push(part.name);
+        parts.push(part.part_name);
       }
 
       // create request data
@@ -324,25 +398,56 @@ Vue.component('new-song-dialog', {
         author: this.author,
         parts: parts,
       };
+
       this.busy = true;
-      var vm = this;
+      this.locked = true;
+      var c = this;
+
+      if (this.mode == "edit") {
+        // updateSong
+        data.parts = this.parts;
+        data.song_id = this.state.target.song.song_id;
+        sendRequest("updateSong", data, function (err, resp) {
+          c.busy = false;
+          c.locked = false;
+          if (err) {
+            c.message = "request_error";
+            return;
+          }
+          if (resp.error) {
+            if (resp.error.code == -32104) {
+              c.message = "duplicated_title";
+              return;
+            }
+            c.message = "server_error";
+            return;
+          }
+          c.succeed = true;
+          c.locked = true;
+          c.$emit("request-done");
+        });
+        return;
+      }
+
+      // createSong
       sendRequest("createSong", data, function (err, resp) {
-        vm.busy = false;
+        c.busy = false;
+        c.locked = false;
         if (err) {
-          vm.message = "request_error";
+          c.message = "request_error";
           return;
         }
         if (resp.error) {
-          if (resp.error.code == -32100) {
-            vm.message = "duplicated_title";
+          if (resp.error.code == -32104) {
+            c.message = "duplicated_title";
             return;
           }
-          vm.message = "server_error";
+          c.message = "server_error";
           return;
         }
-        vm.$emit("request-done");
-        vm.resetAll();
-        vm.hide();
+        c.locked = true;
+        c.succeed = true;
+        c.$emit("request-done");
       });
     },
   }
@@ -352,10 +457,10 @@ Vue.component('new-song-dialog', {
 var app = new Vue({
   el: '#main-frame',
   data: {
-    status: {
-      onSongAdd: false,
+    state: {
+      onSongEdit: false,
       onEntry: false,
-      onDetails: false,
+      onShowDetails: false,
       target: { part: {},
                 song: {} },
     },
@@ -390,7 +495,10 @@ var app = new Vue({
           return;
         }
         this.songs.splice(0, this.songs.length);
-        for (var song of resp.result.songs) {
+        //for (var song of resp.result.songs) {
+        for (var i in resp.result.songs) {
+          var song = resp.result.songs[i];
+          song._showPlayer = false;
           this.songs.push(song);
         }
       });
@@ -419,20 +527,22 @@ var app = new Vue({
           return;
         }
         this.logs.splice(0, this.logs.length);
-        for (var log of resp.result.logs) {
+        //for (var log of resp.result.logs) {
+        for (var i in resp.result.logs) {
+          var log = resp.result.logs[i];
           this.logs.push(log);
         }
         this.totalLogs = resp.result.total_logs;
       });
     },
     entry: function (song, part) {
-      this.status.onEntry = true;
-      this.status.target.part = part;
-      this.status.target.song = song;
+      this.state.onEntry = true;
+      this.state.target.part = part;
+      this.state.target.song = song;
     },
     showDetails: function (song) {
-      this.status.onDetails = true;
-      this.status.target.song = song;
+      this.state.onShowDetails = true;
+      this.state.target.song = song;
       if (!song.comments) {
         var data = { song_id: song.song_id };
         var c = this;
@@ -442,7 +552,12 @@ var app = new Vue({
           c.$set(song, "comments", resp.result.comments);
         });
       }
-    }
+    },
+    editDetails: function () {
+      this.state.onShowDetails = false;
+      this.$refs.editSong.setTarget();
+      this.state.onSongEdit = true;
+    },
   },
   created: function created() {
     this.updateSongList();

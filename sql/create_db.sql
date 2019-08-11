@@ -4,6 +4,8 @@ CREATE TABLE IF NOT EXISTS songs (
   reference TEXT NOT NULL,
   user_id INTEGER NOT NULL,
   url TEXT,
+  url_type TEXT,
+  url_key TEXT,
   comment TEXT,
   create_time TEXT DEFAULT CURRENT_TIMESTAMP,
   update_time TEXT DEFAULT CURRENT_TIMESTAMP,
@@ -16,6 +18,7 @@ CREATE TABLE IF NOT EXISTS parts (
   song_id INTEGER NOT NULL,
   part_name TEXT NOT NULL,
   `order` INTEGER NOT NULL,
+  required INTEGER DEFAULT 0,
   user_id INTEGER,
   instrument_name TEXT,
   status TEXT

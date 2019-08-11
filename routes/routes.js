@@ -1,7 +1,7 @@
 // routes.js
 const model = require('../model/model');
 
-const ERROR_NO_UPDATE = { code: -32101, message: "no_update" };
+const ERROR_NO_UPDATE = { code: -32101, message: "no_item_updated" };
 const ERROR_TARGET_NOT_FOUND = { code: -32102, message: "target_not_found" };
 const ERROR_CREATE_FAILED = { code: -32103, message: "create_failed" };
 const ERROR_CONSTRAINT_VIOLATION = { code: -32104, message: "constraint_violation" };
@@ -10,6 +10,9 @@ const ERROR_CREATELOG_FAILED = { code: -32105, message: "create_log_failed" };
 const moment = require('moment');
 
 function _dateTimeToLocal(string) {
+  if (string === undefined) {
+    return moment.utc().utcOffset(9).format("YYYY-MM-DD HH:mm:ss");
+  }
   try {
     return moment.utc(string).utcOffset(9).format("YYYY-MM-DD HH:mm:ss");
   } catch (err) {
@@ -105,13 +108,15 @@ exports.createComment = async function createComment(req, res, next) {
   try {
     const user = await model.getOrCreateUser({name: params.author});
     params.user_id = user.user_id;
-    const comment = await model.createComment(params);
+    const result = await model.createComment(params);
+    params.comment_id = result.lastID;
 
     await model.createLog({user_id: params.user_id,
-                     target_id: comment.comment_id,
-                     action: "create_comment"});
-    comment.create_time = _dateTimeToLocal(comment.create_time);
-    res.json({result: { comment: comment } });
+                     target_id: params.comment_id,
+                           action: "create_comment"});
+    // add create time
+    params.create_time = _dateTimeToLocal();
+    res.json({result: { comment: params } });
   } catch (err) {
     if (err.code && err.code === 'SQLITE_CONSTRAINT') {
       res.json({ error: ERROR_CONSTRAINT_VIOLATION });
@@ -169,6 +174,27 @@ exports.deleteComment = async function deleteComment(req, res, next) {
   }
 };
 
+function _parseUrl(parsed, params) {
+
+  if ((parsed.hostname == "www.youtube.com"
+       || parsed.hostname == "m.youtube.com")
+      && parsed.pathname == "/watch") {
+    params.url_type = "youtube";
+    params.url_key = parsed.searchParams.get("v") || "";
+  } else if (parsed.hostname == "youtu.be") {
+    params.url_type = "youtube";
+    params.url_key = parsed.pathname.slice(1);
+  } else if (parsed.hostname == "www.nicovideo.jp") {
+    var path = parsed.pathname;
+    var m = /^\/watch\/(sm\d+)$/.exec(parsed.pathname);
+    if (m) {
+      params.url_type = "nicovideo";
+      params.url_key = m[1];
+    }
+  }
+
+}
+
 exports.createSong = async function createSong(req, res, next) {
   const params = req.body.params;
   let err = "";
@@ -183,6 +209,7 @@ exports.createSong = async function createSong(req, res, next) {
   if (params.url && params.url.length) {
     try {
       var parsed = new URL(params.url);
+      _parseUrl(parsed, params);
     }
     catch (e) {
       err = "invalid_url";
@@ -197,11 +224,12 @@ exports.createSong = async function createSong(req, res, next) {
   try {
     const user = await model.getOrCreateUser({name: params.author});
     params.user_id = user.user_id;
-    const song = await model.createSong(params);
+    const result = await model.createSong(params);
+    params.song_id = result.lastID;
     await model.createLog({user_id: params.user_id,
-                           target_id: song.song_id,
+                           target_id: params.song_id,
                            action: "create_song"});
-    res.json({result: { song: song }});
+    res.json({result: { song: params }});
   } catch (err) {
     if (err.code && err.code === 'SQLITE_CONSTRAINT') {
       res.json({ error: ERROR_CONSTRAINT_VIOLATION });
@@ -220,21 +248,80 @@ exports.updateSong = async function updateSong(req, res, next) {
     return;
   }
 
+  if (params.url && params.url.length) {
+    try {
+      var parsed = new URL(params.url);
+      _parseUrl(parsed, params);
+    }
+    catch (e) {
+      res.json({error: {code: -32603, message: "invalid_url"}});
+      return;
+    }
+  }
+
   // get song
   try {
-    let song = await model.getSong(params.song_id);
+    const song = await model.getSong(params.song_id);
 
     if (!song) {
       res.json({ error: ERROR_TARGET_NOT_FOUND });
       return;
     }
 
-    for (const k in params) {
+    const parts = await model.getParts({song_id: params.song_id});
+    const partsById = {};
+
+    for (var part of parts) {
+      partsById[part.part_id] = part;
+    }
+
+    // update parts
+    let requests = [];
+    var index = 0;
+    var p;
+
+    if (params.parts) {
+      for (part of params.parts) {
+        delete partsById[part.part_id];
+        part.order = index;
+        if (part.part_id) {
+          // console.log(`update ${part.part_id}`);
+          p = model.updatePart(part);
+          requests.push(p);
+        } else {
+          p = model.addPart(part);
+          // console.log(`add ${part}`);
+          requests.push(p);
+        }
+        index++;
+      }
+
+      // delete non-exists parts
+      for (var deleteId in partsById) {
+        // console.log(`delete ${deleteId}`);
+        p = model.deletePart(deleteId);
+        requests.push(p);
+      }
+      
+      // wait to update done
+      if (requests.length) {
+        try {
+          await Promise.all(requests);
+        } catch (err) {
+          res.json({error: {code: -32603, message: err.toString()}});
+          return;
+        }
+      }
+    }
+
+    // update Songs
+    for (const k of ["song_id", "title", "reference",
+                     "url", "url_type", "url_key", "comment", "status"]) {
       song[k] = params[k];
     }
 
-    const changes = await model.updateSong(song);
-    if (!changes) {
+    const result = await model.updateSong(song);
+    if (!result.changes) {
       res.json({error: ERROR_NO_UPDATE});
       return;
     }
@@ -249,7 +336,7 @@ exports.updateSong = async function updateSong(req, res, next) {
       res.json({error: ERROR_CONSTRAINT_VIOLATION});
       return;
     }
-    res.json({error: {code: -32603, message: err}});
+    res.json({error: {code: -32603, message: err.toString()}});
   }
 
 };
@@ -276,12 +363,13 @@ exports.addPart = async function addPart(req, res, next) {
       res.json({ error: ERROR_TARGET_NOT_FOUND });
       return;
     }
-    const part = await model.addPart(params);
+    const result = await model.addPart(params);
+    params.part_id = result.lastID;
     await model.createLog({user_id: song.user_id,
-                           target_id: part.part_id,
+                           target_id: params.part_id,
                            action: "add_part"});
     
-    res.json({result: { part: part }});
+    res.json({result: { part: params }});
   } catch (err) {
     res.json({ error: { code: -32603, message: err.toString()} });
   }
@@ -328,6 +416,12 @@ exports.getSongs = async function getSongs(req, res, next) {
   try {
     const songs = await model.getSongs();
     for (const song of songs) {
+      song.readiness = true;
+      for (const part of song.parts) {
+        if (part.required && !part.user_id) {
+          song.readiness = false;
+        }
+      }
       song.create_time = _dateTimeToLocal(song.create_time);
       song.update_time = _dateTimeToLocal(song.update_time);
     }

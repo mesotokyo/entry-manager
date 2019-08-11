@@ -61,10 +61,13 @@ describe('createSong', function () {
       params: {
         title: "テストタイトル",
         reference: "出典の名前",
-        url: "http://example.com",
+        url: "https://www.youtube.com/watch?v=ozyuuMWK4Ww",
         comment: "テストのコメント",
         author: "ほげ",
-        parts: ["ボーカル", "ギター", "ドラム", "アレ"]
+        parts: [{part_name:"ボーカル", required: 0},
+                {part_name:"ギター", required: 1},
+                {part_name:"ドラム", required: 0},
+                {part_name:"アレ"} ]
       },
     };
     return jsonRequest("/api/", data).should.be.fulfilled
@@ -74,6 +77,8 @@ describe('createSong', function () {
       .include({title: data.params.title,
                 reference: data.params.reference,
                 url: data.params.url,
+                url_type: "youtube",
+                url_key: "ozyuuMWK4Ww",
                 comment: data.params.comment,
                 author: data.params.author
                })
@@ -86,10 +91,10 @@ describe('createSong', function () {
       params: {
         title: "テストタイトル",
         reference: "出典の名前",
-        url: "http://example.com/foo",
+        url: "https://www.youtube.com/watch?v=ozyuuMWK4Ww",
         comment: "テストのコメント2",
         author: "ほげほげ",
-        parts: ["foo1",]
+        parts: [{part_name: "foo1"}]
       },
     };
     return jsonRequest("/api/", data).should.be.rejected;
@@ -104,7 +109,7 @@ describe('createSong', function () {
         url: "script>foo",
         comment: "テストのコメント2",
         author: "ほげほげ",
-        parts: ["foo1",]
+        parts: [{part_name: "foo1"}]
       },
     };
     return jsonRequest("/api/", data).should.be.rejected;
@@ -116,13 +121,27 @@ describe('createSong', function () {
       params: {
         title: "テストタイトル",
         reference: "違う出典",
-        url: "http://example.com/foo",
+        url: "https://youtu.be/ozyuuMWK4Ww",
         comment: "テストのコメント3",
         author: "ほげほげ",
-        parts: ["ボーカル",]
+        parts: [{part_name: "ボーカル", required: 1}]
       },
     };
-    return jsonRequest("/api/", data).should.be.fulfilled;
+    return jsonRequest("/api/", data).should.be.fulfilled
+      .and.should.eventually
+      .have.property('result')
+      .have.property('song')
+      .include({title: data.params.title,
+                reference: data.params.reference,
+                url: data.params.url,
+                url_type: "youtube",
+                url_key: "ozyuuMWK4Ww",
+                comment: data.params.comment,
+                author: data.params.author
+               })
+      .have.property('parts')
+      .have.property(0)
+      .include(data.params.parts[0]);
   });
 });
 
@@ -134,7 +153,7 @@ describe('updateSong', function () {
         song_id: 1,
         title: "更新後のタイトル",
         reference: "出典2",
-        url: "http://example.com/foo",
+        url: "https://www.nicovideo.jp/watch/sm32983947",
         comment: "更新後のコメント"
       },
     };
@@ -145,8 +164,29 @@ describe('updateSong', function () {
       .include({title: data.params.title,
                 reference: data.params.reference,
                 url: data.params.url,
+                url_type: "nicovideo",
+                url_key: "sm32983947",
                 comment: data.params.comment,
                });
+  });
+
+  it('should succeeds with change parts', function () {
+    const data = {
+      method: "updateSong",
+      params: {
+        song_id: 1,
+        title: "更新後のタイトル",
+        reference: "出典2",
+        url: "https://www.nicovideo.jp/watch/sm32983947",
+        comment: "更新後のコメント",
+        parts: [
+          { part_id: 2, song_id: 1, part_name: "Gt", order: 1, },
+          { part_id: 3, song_id: 1, part_name: "Dr", order: 2, },
+          { part_id: 4, song_id: 1, part_name: "that", order: 3, },
+        ],
+      },
+    };
+    return jsonRequest("/api/", data).should.be.fulfilled;
   });
 
   it('should succeed but no changes when duplicate values', function () {
@@ -401,7 +441,7 @@ describe('deletePart', function () {
     const data = {
       method: "deletePart",
       params: {
-        part_id: 1,
+        part_id: 4,
       },
     };
     return jsonRequest("/api/", data).should.be.fulfilled
@@ -409,8 +449,7 @@ describe('deletePart', function () {
       .have.property('result')
       .with.have.property('part')
       .include({song_id: 1,
-                order: 0,
-                part_id: 1});
+                part_id: 4});
   });
   it('should faild with invalid part_id', function () {
     const data = {
