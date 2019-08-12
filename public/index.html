@@ -334,7 +334,7 @@
                       プレーヤー表示</button>
                   </span>
                 </div>
-                <div v-if="song._showPlayer">
+                <div class="player" v-if="song._showPlayer">
                   <div v-if="song.url_type == 'youtube'">
                     <iframe :src="'https://www.youtube.com/embed/' + song.url_key"
                             frameborder="0" allow="autoplay; encrypted-media"

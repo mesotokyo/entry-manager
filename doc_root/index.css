@@ -13,8 +13,12 @@
 .song-info {
 }
 
+.song-info .player {
+}
+
 .song-info iframe {
     width: 100%;
+    min-height: 300px;
 }
 
 .show {
