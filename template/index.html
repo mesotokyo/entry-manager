@@ -221,7 +221,7 @@
               <p>出典：<span class="font-weight-bold" v-text="state.target.song.reference"></span></p>
               <p>リクエスト主：<span class="font-weight-bold" v-text="state.target.song.author"></span></p>
               <p>追加日時：<span class="font-weight-bold" v-text="state.target.song.create_time"></span></p>
-              <p>URL：<a :href="state.target.song.url" class="font-weight-bold" v-text="state.target.song.url"></a></p>
+              <p>URL：<a :href="state.target.song.url" target="_blank" class="font-weight-bold" v-text="state.target.song.url"></a></p>
               <p>備考：<span class="font-weight-bold" v-text="state.target.song.comment"></span></p>
               <p>募集パートとエントリー状況：</p>
               <table class="table">
@@ -318,14 +318,14 @@
         <div class="song-list">
           <div class="songs tbody container-fluid">
             <div class="my-2 song row border-bottom" v-for="song in songs">
-              <div class="col song-info mb-2">
+              <div class="col-md-4 song-info mb-2">
                 <div class="mb-2">
                   <span class="h5" v-text="song.title"></span>
                   <span v-if="song.readiness" class="text-primary font-weight-bold">［成立］</span>
                 </div>
                 <div class="">
                   出典：<span class="song-name" v-text="song.reference"></span>
-                  <span v-if="song.url">［<a :href="song.url">参考リンク</a>］</span>
+                  <span v-if="song.url">［<a :href="song.url" target="_blank">参考リンク</a>］</span>
                   <span v-if="song.url_type && song.url_key">
                     <button type="button" class="btn btn-outline-info btn-sm mb-2"
                             @click="togglePlayer(song)"
