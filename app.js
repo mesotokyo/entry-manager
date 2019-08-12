@@ -1,6 +1,7 @@
 const config = require('./config');
 const connect = require('connect');
 const http = require('http');
+const path = require('path');
 
 const bodyParser = require('body-parser');
 const router = require('./router');
@@ -27,7 +28,7 @@ app.use(router);
 
 // static files
 const accessToken = config.gamebattle.token;
-app.use(`/gamebattle/${accessToken}/edit/`, serveStatic('./public', { index: "index.html" }));
+app.use(`/gamebattle/${accessToken}/edit/`, serveStatic(path.join(__dirname, 'public'), { index: "index.html" }));
 
 // server side rendering
 /*
@@ -35,11 +36,11 @@ app.use('/gamebattle/', serverSideRenderer({ templateDir: "./template",
                                              index: "index.html"
                                            }));
 */
-app.use(`/gamebattle/`, serveStatic('./template', { index: "index.html" }));
+app.use(`/gamebattle/`, serveStatic(path.join(__dirname, 'template'), { index: "index.html" }));
 
 
 // root
-app.use('/', serveStatic('./doc_root'));
+app.use('/', serveStatic(path.join(__dirname, 'doc_root')));
 
 // respond to all requests
 app.use(function(req, res){
