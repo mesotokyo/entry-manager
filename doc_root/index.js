@@ -278,7 +278,17 @@ Vue.component('edit-song-dialog', {
       url: "",
       author: "",
       comment: "",
-      parts: [{part_name:"", required:0},],
+      parts: [
+        {part_name:"リード/コード系1", required: 1},
+        {part_name:"リード/コード系2", required: 0},
+        {part_name:"リード/コード系3", required: 0},
+        {part_name:"ベース系1", required: 1},
+        {part_name:"ベース系2", required: 0},
+        {part_name:"ベース系3", required: 0},
+        {part_name:"ドラム/パーカッション系1", required: 1},
+        {part_name:"ドラム/パーカッション系2", required: 0},
+        {part_name:"ドラム/パーカッション系3", required: 0},
+      ],
       message: "",
       busy: false,
       locked: false,
@@ -388,7 +398,7 @@ Vue.component('edit-song-dialog', {
           this.message = "blank_part_exists";
           return;
         }
-        parts.push(part.part_name);
+        parts.push(part);
       }
 
       // create request data
