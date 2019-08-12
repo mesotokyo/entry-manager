@@ -1,5 +1,26 @@
 
 
+function _html(status, html) {
+  const res = this;
+  if (html === undefined) {
+    html = status;
+    status = 200;
+  }
+  if (!status || !html) {
+    res.writeHead(500);
+    res.end();
+    return;
+  }
+  
+  const buf = Buffer.from(html);
+  const headers = {
+    'Content-Length': buf.length,
+    'Content-Type': 'text/html; charset=utf-8',
+  };
+  res.writeHead(status, headers);
+  res.end(html);
+}
+
 function _json(status, obj) {
   const res = this;
   if (obj === undefined) {
@@ -25,6 +46,7 @@ function _json(status, obj) {
 
 function response(req, res, next) {
   res.json = _json;
+  res.html = _html;
   next();
 }
 

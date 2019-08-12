@@ -1,7 +1,6 @@
 {
   "gamebattle": {
     "database": "./data/data.sqlite",
-    "token": "0644d25c7f4c0ebf",
-    "_token": "0644d25c7f4c"
+    "token": "0644d25c7f4c0ebf"
   }
 }

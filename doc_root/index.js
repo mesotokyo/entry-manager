@@ -32,6 +32,7 @@ Vue.component('song-list', {
     songs: Array,
     totalSongs: Number,
     isLoading: Boolean,
+    readOnly: { type: Boolean, default: false },
   },
   data: function () {
     return {
@@ -124,6 +125,7 @@ Vue.component('song-details-dialog', {
   props: {
     state: Object,
     isLoading: Boolean,
+    readOnly: { type: Boolean, default: false },
   },
   methods: {
     hide: function () {

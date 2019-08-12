@@ -512,6 +512,7 @@ exports.createLog = function createLog(params) {
 
 exports.getLogs = function getLogs(params) {
   let _db;
+  params = params || {};
   params.limit = params.limit || 100;
   params.offset = params.offset || 0;
   
