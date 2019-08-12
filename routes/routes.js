@@ -1,5 +1,6 @@
 // routes.js
 const model = require('../model/model');
+const config = require('../config');
 
 const ERROR_NO_UPDATE = { code: -32101, message: "no_item_updated" };
 const ERROR_TARGET_NOT_FOUND = { code: -32102, message: "target_not_found" };
@@ -8,6 +9,8 @@ const ERROR_CONSTRAINT_VIOLATION = { code: -32104, message: "constraint_violatio
 const ERROR_CREATELOG_FAILED = { code: -32105, message: "create_log_failed" };
 
 const moment = require('moment');
+
+model.setConfig(config.gamebattle);
 
 function _dateTimeToLocal(string) {
   if (string === undefined) {

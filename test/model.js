@@ -1,11 +1,13 @@
 const assert = require('assert');
 const model = require('../model/model');
+const config = require('../config');
 
 var chai = require("chai");
 var chaiAsPromised = require("chai-as-promised");
 chai.use(chaiAsPromised);
 chai.should();
 
+model.setConfig(config.gamebattle);
 
 describe('model', function () {
   describe('createUser', function () {

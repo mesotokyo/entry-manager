@@ -1,6 +1,14 @@
-const config = require('../config');
 const pSqlite3 = require('./promised-sqlite3');
 const moment = require('moment');
+
+let config;
+
+exports.setConfig = function (conf) {
+  if (conf === undefined) {
+    throw new Error("NO_CONFIG");
+  }
+  config = conf;
+}
 
 exports.getOrCreateUser = function getOrCreateUser(params) {
   if (params.name === undefined || !params.name.length) {
