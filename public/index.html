@@ -228,23 +228,22 @@
                 <thead>
                   <tr>
                     <th>パート</th>
-                    <th>プレイヤー名</th>
+                    <th>プレイヤー</th>
                     <th>楽器名</th>
-                    <th></th>
                   </tr>
                 </thead>
                 <tbody>
                   <tr v-for="part in state.target.song.parts">
                     <td v-text="part.part_name"></td>
-                    <td v-text="part.entry_name"></td>
-                    <td v-text="part.instrument_name"></td>
                     <td>
+                      <span v-text="part.entry_name"></span>
                       <button type="button"
                               class="btn btn-outline-danger btn-sm"
                               @click="deleteEntry(part)" v-if="part.entry_name">
-                        エントリーを取り消す
+                        削除
                       </button>
                     </td>
+                    <td v-text="part.instrument_name"></td>
                   </tr>
                 </tbody>
               </table>
@@ -306,27 +305,29 @@
 
     <script type="text/x-template" id="song-list-template">
       <div class="song-list-wrap">
-        <table class="song-list table table-hover table-bordered">
-          <thead>
-            <tr>
-              <th>曲情報
-                <span v-show="isLoading"><img src="/loading.gif"></span>
-              </th>
-              <th>募集パート（<span class="text-primary">※</span>マーク付きは必須パート）</th>
-            </tr>
-          </thead>
-          <tbody class="songs">
-            <tr class="song" v-for="song in songs">
-              <td class="song-info">
+        <div class="thead container-fluid">
+          <div class="row border-bottom">
+            <div class="my-1 col h5 font-weight-bold float-md-left">
+              曲情報
+              <span v-show="isLoading"><img src="/loading.gif"></span>
+              / 募集パート（
+              <span class="text-primary">※</span>マーク付きは必須パート）
+            </div>
+          </div>
+        </div><!-- .thead -->
+        <div class="song-list">
+          <div class="songs tbody container-fluid">
+            <div class="my-2 song row border-bottom" v-for="song in songs">
+              <div class="col song-info mb-2">
                 <div class="mb-2">
                   <span class="h5" v-text="song.title"></span>
                   <span v-if="song.readiness" class="text-primary font-weight-bold">［成立］</span>
                 </div>
-                <div class="mb-1">
+                <div class="">
                   出典：<span class="song-name" v-text="song.reference"></span>
                   <span v-if="song.url">［<a :href="song.url">参考リンク</a>］</span>
                   <span v-if="song.url_type && song.url_key">
-                    <button type="button" class="btn btn-outline-info btn-sm"
+                    <button type="button" class="btn btn-outline-info btn-sm mb-2"
                             @click="togglePlayer(song)"
                             :class="{active: song._showPlayer}"
                             >
@@ -335,14 +336,13 @@
                 </div>
                 <div v-if="song._showPlayer">
                   <div v-if="song.url_type == 'youtube'">
-                    <iframe width="560" height="315"
-                            :src="'https://www.youtube.com/embed/' + song.url_key"
+                    <iframe :src="'https://www.youtube.com/embed/' + song.url_key"
                             frameborder="0" allow="autoplay; encrypted-media"
                             allowfullscreen></iframe>
                   </div>
                   <div v-if="song.url_type == 'nicovideo'">
                     <iframe allowfullscreen="allowfullscreen" allow="autoplay"
-                            frameborder="0" width="640" height="360"
+                            frameborder="0"
                             :src="'https://embed.nicovideo.jp/watch/' + song.url_key + '?oldScript=1from=0&amp;allowProgrammaticFullScreen=1'"
                             style="max-width: 100%;"></iframe>
                   </div>
@@ -352,10 +352,10 @@
                 </div>
                 <button v-if="!readOnly" type="button" class="btn btn-outline-info btn-sm" @click="showDetails(song)">詳細やコメントを表示</button>
                 
-              </td>
-              <td>
+              </div>
+              <div class="col">
                 <div class="entry-list">
-                  <div class="entries mb-3 mr-3" v-for="part in song.parts">
+                  <div class="entries mb-2 mr-2" v-for="part in song.parts">
                     <span v-text="part.part_name"></span>
                     <sup v-if="part.required" class="text-primary">※</sup>：
                     <span v-if="part.entry_name">
@@ -366,15 +366,15 @@
                     </span>
                     <span v-else>
                       <button v-if="!readOnly" type="button" class="btn btn-outline-info btn-sm" @click="entry(song, part)">エントリーする</button>
-                      <span v-else class="text-primary">（募集中）</span>
+                      <span v-else class="text-primary">募集中</span>
                     </span>
                   </div>
                 </div>
-              </td>
-            </tr>
-          </tbody><!-- .songs -->
-        </table>
-      </div>
+              </div>
+            </div>
+          </div><!-- .songs -->
+        </div><!-- .song-list -->
+      </div><!-- .song-list-wrap -->
     </script><!-- end of "song-list-template" -->
 
   </head>
@@ -408,10 +408,14 @@
         </div>
       </div>
 
-      <h2 class="h3">
-        更新履歴
-        <span v-show="isLoadingLogs"><img src="/loading.gif"></span>
-      </h2>
+      <div class="h5 font-weight-bold container-fluid">
+        <div class="row">
+          <div class="col">
+            更新履歴
+            <span v-show="isLoadingLogs"><img src="/loading.gif"></span>
+          </div>
+        </div>
+      </div>
 
       <div class="log-list-wrap">
         <log-list :logs="logs"

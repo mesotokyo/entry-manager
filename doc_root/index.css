@@ -1,9 +1,20 @@
+.entry-list {
+}
+
+.entry-list sup {
+    font-size: 60%;
+    top: -1em;
+}
+
 .entry-list .entries {
     display: inline-block;
 }
 
 .song-info {
-    width: 600px;
+}
+
+.song-info iframe {
+    width: 100%;
 }
 
 .show {
