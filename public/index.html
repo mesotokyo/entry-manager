@@ -9,7 +9,6 @@
 
     <script>var entryConfig={token:"0644d25c7f4c0ebf"};</script>
 
-    
     <script type="text/x-template" id="log-list-template">
       <div class="log-list">
         <ul class="list-group">
@@ -117,7 +116,7 @@
               <div class="alert alert-info" v-if="mode == 'edit' && showDeletePartAlert" >
                 ※エントリー済みのパートは削除/編集できません。先にエントリーを取り消してください。
               </div>
-                
+              
               <div class="form-group">
                 <label for="new-song-author">リクエスト者名：</label>
                 <small id="new-song-author-help" class="form-text text-muted">リクエスト主を入力（必須）</small>
@@ -147,7 +146,7 @@
               </div>
             </div>
             <div class="modal-footer">
-              <img src="/loading.gif" v-show="busy">
+              <img src="loading.gif" v-show="busy">
               <button @click="hide()" type="button" class="btn btn-secondary" data-dismiss="modal">閉じる</button>
               <button v-if="mode == 'create'" type="button" class="btn btn-primary" :disabled="locked" @click="postNewSong">この内容で追加</button>
               <button v-if="mode == 'edit'" type="button" class="btn btn-primary" :disabled="locked" @click="postNewSong">保存</button>
@@ -195,7 +194,7 @@
               </div>
             </div>
             <div class="modal-footer">
-              <img src="/loading.gif" v-show="busy">
+              <img src="loading.gif" v-show="busy">
               <button @click="hide()" type="button" class="btn btn-secondary" data-dismiss="modal">閉じる</button>
               <button type="button" :disabled="locked" class="btn btn-primary" @click="apply">この内容でエントリー</button>
             </div>
@@ -215,12 +214,13 @@
                 <span aria-hidden="true">&times;</span>
               </button>
             </div>
+
             <div class="modal-body">
               <p>曲名：<span class="font-weight-bold" v-text="state.target.song.title"></span></p>
               <p>出典：<span class="font-weight-bold" v-text="state.target.song.reference"></span></p>
               <p>リクエスト主：<span class="font-weight-bold" v-text="state.target.song.author"></span></p>
               <p>追加日時：<span class="font-weight-bold" v-text="state.target.song.create_time"></span></p>
-              <p>URL：<a :href="state.target.song.url" class="font-weight-bold" v-text="state.target.song.url"></span></p>
+              <p>URL：<a :href="state.target.song.url" class="font-weight-bold" v-text="state.target.song.url"></a></p>
               <p>備考：<span class="font-weight-bold" v-text="state.target.song.comment"></span></p>
               <p>募集パートとエントリー状況：</p>
               <table class="table">
@@ -248,7 +248,7 @@
                 </tbody>
               </table>
 
-              <p>コメント：<img src="/loading.gif" v-show="isLoading"></p>
+              <p>コメント：<img src="loading.gif" v-show="isLoading"></p>
               <div class="form-group">
                 <div class="list-group">
                   <div class="list-group-item"
@@ -257,7 +257,8 @@
                       <h6>
                         <span class="font-weight-bold" v-text="comment.author"></span>
                         <small class="sm text-muted">
-                          （<span v-text="comment.create_time"></span>）                      </small>：
+                          （<span v-text="comment.create_time"></span>）
+                        </small>：
                       </h6>
                     </div>
                     <p class="mb-1" v-text="comment.comment"></p>
@@ -279,21 +280,20 @@
               <div class="form-group">
                 <button type="button" :disabled="locked" class="btn btn-primary" @click="postComment">コメントを追加</button>
               </div>
-            </div>
 
-            <div class="alert alert-warning" v-if="succeed">
-              投稿が完了しました
-            </div>
+              <div class="alert alert-warning" v-if="succeed">
+                投稿が完了しました
+              </div>
 
-            <div class="alert alert-warning" v-if="message">
-              エラー：
-              <span v-if="message == 'no_comment'">コメントを入力してください</span>
-              <span v-else-if="message == 'no_author'">お名前を入力してください</span>
-              <span v-else v-text="message"></span>
+              <div class="alert alert-warning" v-if="message">
+                エラー：
+                <span v-if="message == 'no_comment'">コメントを入力してください</span>
+                <span v-else-if="message == 'no_author'">お名前を入力してください</span>
+                <span v-else v-text="message"></span>
+              </div>
             </div>
-
             <div class="modal-footer">
-              <img src="/loading.gif" v-show="busy">
+              <img src="loading.gif" v-show="busy">
               <button @click="hide()" type="button" class="btn btn-secondary" data-dismiss="modal">閉じる</button>
               <button type="button" :disabled="locked" class="btn btn-primary" @click="editDetails">曲情報を編集</button>
             </div>
@@ -309,9 +309,9 @@
           <thead>
             <tr>
               <th>曲情報
-                <span v-show="isLoading"><img src="/loading.gif"></span>
+                <span v-show="isLoading"><img src="loading.gif"></span>
               </th>
-              <th>募集パート（<span class="text-primary">※</span>マーク付きは必須パート</span>）</th>
+              <th>募集パート（<span class="text-primary">※</span>マーク付きは必須パート）</th>
             </tr>
           </thead>
           <tbody class="songs">
@@ -377,7 +377,6 @@
       </div>
     </script><!-- end of "song-list-template" -->
 
-    
   </head>
   <body>
     <div id="main-frame">
@@ -407,7 +406,7 @@
 
       <h2 class="h3">
         更新履歴
-        <span v-show="isLoadingLogs"><img src="/loading.gif"></span>
+        <span v-show="isLoadingLogs"><img src="loading.gif"></span>
       </h2>
 
       <div class="log-list-wrap">
@@ -426,14 +425,20 @@
       <song-details-dialog ref="songDetails" :state="state"
                            :is-loading="isLoadingComments"
                            @edit-details="editDetails"
-                       @request-done="updateContents">
+                           @request-done="updateContents">
       </song-details-dialog>
       <edit-song-dialog ref="editSong" :state="state"
-                       @request-done="updateContents">
+                        @request-done="updateContents">
       </edit-song-dialog>
       <new-entry-dialog ref="newEntry" :state="state"
-                        @request-done="updateContents"
-                        ></news-entry-dialog>
+                        @request-done="updateContents">
+      </new-entry-dialog>
+
+      <div id="loading-wrapper" v-if="0">
+        <p class="h2 mt-4">読み込み中…</p>
+        <img src="loading.gif">
+      </div>
+
     </div><!-- #main-frame -->
 
     <script src="index.js"></script>

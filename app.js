@@ -25,11 +25,12 @@ app.use(router);
 
 // static files
 
-app.use(serveStatic('./public', { index: "index.html" }));
+app.use('/gamebattle', serveStatic('./public', { index: "index.html" }));
         
 // respond to all requests
 app.use(function(req, res){
-  res.end('Hello from Connect!\n');
+  res.statusCode = 404;
+  res.end('Not Found\n');
 });
  
 //create node.js http server and listen on port
