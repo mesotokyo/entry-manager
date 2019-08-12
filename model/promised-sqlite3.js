@@ -1,11 +1,18 @@
 const sqlite3 = require('sqlite3');
 
+const TIMEOUT_MSEC = 10000;
+const RETRY_MSEC = 10;
+
 exports.connect = function connect(config) {
-  let _db;
   return new Promise((resolve, reject) => {
-    const db = new sqlite3.Database(config.database);
-    _db = db;
-    resolve(db);
+    const db = new sqlite3.Database(config.database, function(err) {
+      if (err) {
+        console.error(err);
+        reject(err);
+        return;
+      }
+      resolve(db);
+    });
   });
 };
 
@@ -13,6 +20,7 @@ exports.close = function close(db) {
   return new Promise((resolve, reject) => {
     db.close(function (err) {
       if (err) {
+        console.error(err);
         reject(err);
         return;
       }
@@ -25,6 +33,7 @@ exports.transaction = function transaction(db) {
   return new Promise((resolve, reject) => {
     db.run('BEGIN TRANSACTION', function (err) {
       if (err) {
+        console.error(err);
         reject(err);
         return;
       }
@@ -64,9 +73,37 @@ exports.rollback = function rollback(db) {
   });
 };
 
+function _prepare(db, sql, callback, elapsed) {
+  db.prepare(sql, function (err) {
+    // if database if busy, retry
+    if (err && err.code == 'SQLITE_BUSY') {
+      elapsed = elapsed || 0;
+      // timeout
+      if (elapsed > TIMEOUT_MSEC) {
+        callback.call(this, err);
+      }
+
+      // retry
+      let delay;
+      if (!elapsed) {
+        delay = RETRY_MSEC;
+      } else {
+        delay = elapsed;
+      }
+      elapsed += delay;
+      setTimeout(_prepare, delay, sql, callback, elapsed);
+      return;
+    }
+
+    // done
+    callback.call(this, err);
+  });
+}
+
 exports.prepare = function prepare(db, sql) {
   return new Promise((resolve, reject) => {
-    db.prepare(sql, function (err) {
+    //db.prepare(sql, function (err) {
+    _prepare(db, sql, function (err) {
       if (err) {
         reject(err);
         return;
@@ -76,27 +113,69 @@ exports.prepare = function prepare(db, sql) {
   });
 };
 
-exports._execStatement = function _execStatement(db, f, sql, args) {
 
+function _execStmt(stmt, f, args) {
   return new Promise((resolve, reject) => {
-    return this.prepare(db, sql)
-      .then(stmt => {
-        args.push(function (err, result) {
-          stmt.finalize();
-          if (err) {
-            reject(err);
-            return;
+    let elapsed = 0;
+
+    function cb(err, result) {
+      // if database if busy, retry
+      if (err && err.code == 'SQLITE_BUSY') {
+
+        // retry
+        if (elapsed < TIMEOUT_MSEC) {
+          // retry
+          let delay;
+          if (!elapsed) {
+            delay = RETRY_MSEC;
+          } else {
+            delay = elapsed;
           }
-          if (result) {
-            resolve(result);
-            return;
-          }
-          resolve(this);
-        });
-        stmt[f].apply(stmt, args);
-      });
-    
+          elapsed += delay;
+          setTimeout(function () {
+            stmt[f].apply(stmt, newArgs);
+          },  delay);
+          return;
+        }
+      }
+      // done
+      if (err) {
+        reject(err);
+        return;
+      }
+      if (result) {
+        resolve(result);
+        return;
+      }
+      resolve(this);
+    }
+
+    const newArgs = Array.from(args);
+    newArgs.push(cb);
+    stmt[f].apply(stmt, newArgs);
   });
+}
+
+exports._execStatement = function _execStatement(db, f, sql, args) {
+  let _stmt;
+  return this.prepare(db, sql)
+    .then(stmt => {
+      _stmt = stmt;
+      return _execStmt(stmt, f, args);
+    })
+    .catch(err => {
+      _stmt.finalize();
+      return Promise.reject(err);
+    })
+    .then(result => {
+      _stmt.finalize();
+      return Promise.resolve(result);
+    })
+    .catch(err => {
+      //console.error(err);
+      return Promise.reject(err);
+    });
+  
 };
 
 exports.runStatement = function runStatement(db, sql) {

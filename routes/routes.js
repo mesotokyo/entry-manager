@@ -298,12 +298,13 @@ exports.updateSong = async function updateSong(req, res, next) {
         delete partsById[part.part_id];
         part.order = index;
         if (part.part_id) {
-          // console.log(`update ${part.part_id}`);
+          //console.log(`update ${part.part_id}`);
           p = model.updatePart(part);
           requests.push(p);
         } else {
+          part.song_id = song.song_id;
           p = model.addPart(part);
-          // console.log(`add ${part}`);
+          //console.log(`add ${part}`);
           requests.push(p);
         }
         index++;
@@ -311,7 +312,7 @@ exports.updateSong = async function updateSong(req, res, next) {
 
       // delete non-exists parts
       for (var deleteId in partsById) {
-        // console.log(`delete ${deleteId}`);
+        //console.log(`delete ${deleteId}`);
         p = model.deletePart(deleteId);
         requests.push(p);
       }
