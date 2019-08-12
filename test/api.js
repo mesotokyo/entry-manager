@@ -21,7 +21,7 @@ function jsonRequest(path, params, callback) {
     },
   };
   const postData = Object.assign(params);
-  postData.params.token = config.token;
+  postData.params.token = config.gamebattle.token;
   const json = JSON.stringify(postData);
   return new Promise((resolve, reject) => {
     const req = http.request(opt, (res) => {
