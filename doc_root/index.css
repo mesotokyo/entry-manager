@@ -1,4 +1,10 @@
+.entry-list .entries {
+    display: inline-block;
+}
 
+.song-info {
+    width: 600px;
+}
 
 .show {
     display: block !important;
@@ -6,17 +12,6 @@
 .modal {
     background: rgba(0, 0, 0, 0.5);
     overflow: scroll !important;
-}
-
-.entry-list dt {
-    display: inline-block;
-}
-.entry-list dd {
-    display: inline-block;
-    margin-right: 1em;
-}
-.entry-list dt:after {
-    content: ":";
 }
 
 #loading-wrapper {

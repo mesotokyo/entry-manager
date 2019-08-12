@@ -354,24 +354,22 @@
                 
               </td>
               <td>
-                <dl class="entry-list">
-                  <template v-for="part in song.parts">
-                    <dt>
-                      <span v-text="part.part_name"></span>
-                      <sup v-if="part.required" class="text-primary">※</sup>
-                    </dt>
-                    <dd v-if="part.entry_name">
+                <div class="entry-list">
+                  <div class="entries mb-3 mr-3" v-for="part in song.parts">
+                    <span v-text="part.part_name"></span>
+                    <sup v-if="part.required" class="text-primary">※</sup>：
+                    <span v-if="part.entry_name">
                       <span v-text="part.entry_name"></span>
                       <span v-if="part.instrument_name">
                         （<span v-text="part.instrument_name"></span>）
                       </span>
-                    </dd>
-                    <dd v-else>
+                    </span>
+                    <span v-else>
                       <button v-if="!readOnly" type="button" class="btn btn-outline-info btn-sm" @click="entry(song, part)">エントリーする</button>
                       <span v-else class="text-primary">（募集中）</span>
-                    </dd>
-                  </template>
-                </dl>
+                    </span>
+                  </div>
+                </div>
               </td>
             </tr>
           </tbody><!-- .songs -->

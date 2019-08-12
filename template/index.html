@@ -1,13 +1,14 @@
 <!doctype html>
 <html lang="ja">
   <head>
-    <title>エントリーリスト</title>
+    <title>バトルセッション エントリーリスト</title>
     <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="robots" content="noindex">
     <link rel="stylesheet" href="/index.css">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.2/css/bootstrap.min.css" integrity="sha384-Smlep5jCw/wG7hdkwQ/Z5nLIefveQRIY9nfy6xoR1uRYBtpZgI6339F5dgvm/e9B" crossorigin="anonymous">
 
-    <script>var entryConfig={};</script>
+    <script>var entryConfig={token:"0644d25c7f4c0ebf"};</script>
 
     <script type="text/x-template" id="log-list-template">
       <div class="log-list">
@@ -353,23 +354,22 @@
                 
               </td>
               <td>
-                <dl class="entry-list">
-                  <template v-for="part in song.parts">
-                    <dt>
-                      <span v-text="part.part_name"></span>
-                      <sup v-if="part.required" class="text-primary">※</sup>
-                    </dt>
-                    <dd v-if="part.entry_name">
+                <div class="entry-list">
+                  <div class="entries mb-3 mr-3" v-for="part in song.parts">
+                    <span v-text="part.part_name"></span>
+                    <sup v-if="part.required" class="text-primary">※</sup>：
+                    <span v-if="part.entry_name">
                       <span v-text="part.entry_name"></span>
                       <span v-if="part.instrument_name">
                         （<span v-text="part.instrument_name"></span>）
                       </span>
-                    </dd>
-                    <dd v-else>
-                      <button type="button" class="btn btn-outline-info btn-sm" @click="entry(song, part)">エントリーする</button>
-                    </dd>
-                  </template>
-                </dl>
+                    </span>
+                    <span v-else>
+                      <button v-if="!readOnly" type="button" class="btn btn-outline-info btn-sm" @click="entry(song, part)">エントリーする</button>
+                      <span v-else class="text-primary">（募集中）</span>
+                    </span>
+                  </div>
+                </div>
               </td>
             </tr>
           </tbody><!-- .songs -->
@@ -382,7 +382,10 @@
     <div id="main-frame">
 
       <header class="event-selector jumbotron">
-        <h1>エントリーリスト</h1>
+        <h1>バトル曲セッション エントリーリスト</h1>
+        <p class="mt-3">
+          「<a href="http://bandoff.info/gamebattle/">【ゲーム音楽】バトル曲セッション</a>」のエントリーリストです。詳細やエントリーについては<a href="http://bandoff.info/gamebattle/">bandoff.infoのセッションページ</a>からご確認ください。
+        </p>
       </header>
 
       <div class="song-list-wrap">
@@ -393,6 +396,13 @@
                    @show-details="showDetails"
                    >
         </song-list>
+      </div>
+
+      <div class="actions text-center">
+        <div class="alert alert-warning" v-if="error">
+          <span v-if="error == 'invalid_token'">不正なアクセストークンです。再読み込みするか、URLをご確認ください。</span>
+          <span v-else>読み込みエラーです。</span>
+        </div>
       </div>
 
       <h2 class="h3">
@@ -413,17 +423,24 @@
         </div>
       </footer>
 
-      <div id="loading-wrapper" v-if="0">
-        <p class="h2 mt-4">読み込み中…</p>
-        <img src="/loading.gif">
-      </div>
-
       <song-details-dialog ref="songDetails" :state="state"
                            :is-loading="isLoadingComments"
                            :read-only="true"
                            @edit-details="editDetails"
                            @request-done="updateContents">
       </song-details-dialog>
+      <edit-song-dialog ref="editSong" :state="state"
+                        @request-done="updateContents">
+      </edit-song-dialog>
+      <new-entry-dialog ref="newEntry" :state="state"
+                        @request-done="updateContents">
+      </new-entry-dialog>
+
+      <div id="loading-wrapper" v-if="0">
+        <p class="h2 mt-4">読み込み中…</p>
+        <img src="/loading.gif">
+      </div>
+
     </div><!-- #main-frame -->
 
     <script src="/index.js"></script>
