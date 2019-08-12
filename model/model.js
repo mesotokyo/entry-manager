@@ -498,12 +498,15 @@ exports.createLog = function createLog(params) {
     .then(db => {
       _db = db;
       const sql = 'INSERT INTO logs' +
-            '         (user_id, action, target_id)' +
-            '  VALUES (?,       ?,       ?)';
+            '         (user_id, action, target_id, ip_address, user_agent)' +
+            '  VALUES (?, ?, ?, ?, ?)';
       return pSqlite3.runStatement(db, sql,
                                    params.user_id,
                                    params.action,
-                                   params.target_id);
+                                   params.target_id,
+                                   params.ip_address,
+                                   params.user_agent
+                                  );
     })
     .finally(() => {
       _db.close();
@@ -519,7 +522,9 @@ exports.getLogs = function getLogs(params) {
   return pSqlite3.connect(config)
     .then(db => {
       _db = db;
-      const sql = 'SELECT * FROM logs' +
+      const sql = 'SELECT log_id, user_id, action, target_id, ' +
+            '        timestamp, users.name ' +
+            '        FROM logs' +
             '        LEFT JOIN users USING(user_id)' +
             '        ORDER BY timestamp DESC LIMIT ? OFFSET ?';
       return pSqlite3.runStatementAndGetAll(db, sql,

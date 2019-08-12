@@ -37,7 +37,9 @@ CREATE TABLE IF NOT EXISTS logs (
   user_id INTEGER NOT NULL,
   action TEXT NOT NULL,
   target_id INTEGER NOT NULL,
-  timestamp TEXT DEFAULT CURRENT_TIMESTAMP
+  timestamp TEXT DEFAULT CURRENT_TIMESTAMP,
+  ip_address TEXT,
+  user_agent TEXT
 );
 
 CREATE TABLE IF NOT EXISTS comments (

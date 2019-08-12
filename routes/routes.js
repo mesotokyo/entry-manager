@@ -53,6 +53,8 @@ exports.createEntry = async function createEntry(req, res, next) {
 
     await model.createLog({user_id: part.user_id,
                            target_id: part.part_id,
+                           ip_address: req.socket.address().address,
+                           user_agent: req.headers["user-agent"],
                            action: "create_entry"});
     
     res.json({result: { part: part }});
@@ -83,6 +85,8 @@ exports.deleteEntry = async function deleteEntry(req, res, next) {
       return;
     }
     await model.createLog({user_id: part.user_id,
+                           ip_address: req.socket.address().address,
+                           user_agent: req.headers["user-agent"],
                            target_id: part.part_id,
                            action: "delete_entry"});
     res.json({result: {part: part}});
@@ -115,7 +119,9 @@ exports.createComment = async function createComment(req, res, next) {
     params.comment_id = result.lastID;
 
     await model.createLog({user_id: params.user_id,
-                     target_id: params.comment_id,
+                           ip_address: req.socket.address().address,
+                           user_agent: req.headers["user-agent"],
+                           target_id: params.comment_id,
                            action: "create_comment"});
     // add create time
     params.create_time = _dateTimeToLocal();
@@ -168,6 +174,8 @@ exports.deleteComment = async function deleteComment(req, res, next) {
       return;
     }
     await model.createLog({user_id: comment.user_id,
+                           ip_address: req.socket.address().address,
+                           user_agent: req.headers["user-agent"],
                            target_id: comment.comment_id,
                            action: "delete_comment"});
     res.json({ result: { comment: comment }});
@@ -230,6 +238,8 @@ exports.createSong = async function createSong(req, res, next) {
     const result = await model.createSong(params);
     params.song_id = result.lastID;
     await model.createLog({user_id: params.user_id,
+                           ip_address: req.socket.address().address,
+                           user_agent: req.headers["user-agent"],
                            target_id: params.song_id,
                            action: "create_song"});
     res.json({result: { song: params }});
@@ -330,6 +340,8 @@ exports.updateSong = async function updateSong(req, res, next) {
     }
 
     await model.createLog({user_id: song.user_id,
+                           ip_address: req.socket.address().address,
+                           user_agent: req.headers["user-agent"],
                            target_id: params.song_id,
                            action: "update_song"});
 
@@ -369,6 +381,8 @@ exports.addPart = async function addPart(req, res, next) {
     const result = await model.addPart(params);
     params.part_id = result.lastID;
     await model.createLog({user_id: song.user_id,
+                           ip_address: req.socket.address().address,
+                           user_agent: req.headers["user-agent"],
                            target_id: params.part_id,
                            action: "add_part"});
     
@@ -403,6 +417,8 @@ exports.deletePart = async function deletePart(req, res, next) {
     }
 
     await model.createLog({user_id: song.user_id,
+                           ip_address: req.socket.address().address,
+                           user_agent: req.headers["user-agent"],
                            target_id: part.part_id,
                            action: "delete_part"});
     

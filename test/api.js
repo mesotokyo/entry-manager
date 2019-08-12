@@ -18,6 +18,7 @@ function jsonRequest(path, params, callback) {
     method: "POST",
     headers: {
       'Content-Type': 'application/json',
+      'User-Agent': 'test-agent',
     },
   };
   const postData = Object.assign(params);
