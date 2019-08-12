@@ -20,6 +20,15 @@ run:
 		-v $(shell pwd)/data:/var/entrymanager/data \
 		-v $(shell pwd)/config.sample.json:/var/entrymanager/config.json \
 		-p '2080:3000' --restart=always $(NAME)
+
+restart:
+	docker stop $(NAME)
+	docker rm $(NAME)
+	docker run -d --name $(NAME) \
+		-v $(shell pwd)/data:/var/entrymanager/data \
+		-v $(shell pwd)/config.sample.json:/var/entrymanager/config.json \
+		-p '2080:3000' --restart=always $(NAME)
+
 shell:
 	docker run --rm -ti \
 		-v $(shell pwd)/data:/var/entrymanager/data \
