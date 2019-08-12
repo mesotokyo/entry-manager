@@ -343,7 +343,21 @@ Vue.component('edit-song-dialog', {
       
       this.busy = false;
       this.message = "";
-      this.parts.splice(0, this.parts.length, {part_name:""});
+      this.parts.splice(0, this.parts.length);
+      a = [ {part_name:"リード/コード系1", required: 1},
+            {part_name:"リード/コード系2", required: 0},
+            {part_name:"リード/コード系3", required: 0},
+            {part_name:"ベース系1", required: 1},
+            {part_name:"ベース系2", required: 0},
+            {part_name:"ベース系3", required: 0},
+            {part_name:"ドラム/パーカッション系1", required: 1},
+            {part_name:"ドラム/パーカッション系2", required: 0},
+            {part_name:"ドラム/パーカッション系3", required: 0},
+          ];
+      for (i in a) {
+        this.parts.push(a[i]);
+      }
+
       this.locked = false;
       this.succeed = false;
     },
