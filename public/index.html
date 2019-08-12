@@ -324,7 +324,7 @@
                 </div>
                 <div class="mb-1">
                   出典：<span class="song-name" v-text="song.reference"></span>
-                  ［<a :href="song.url" v-if="song.url">参考リンク</a>］
+                  <span v-if="song.url">［<a :href="song.url">参考リンク</a>］</span>
                   <span v-if="song.url_type && song.url_key">
                     <button type="button" class="btn btn-outline-info btn-sm"
                             @click="togglePlayer(song)"
