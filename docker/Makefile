@@ -29,4 +29,3 @@ shell:
 
 create_sample_db:
 	sqlite3 data/data.sqlite < ../sql/create_db.sql
-	
