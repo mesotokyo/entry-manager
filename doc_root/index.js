@@ -348,7 +348,7 @@ Vue.component('edit-song-dialog', {
       this.succeed = false;
     },
     addPart: function () {
-      this.parts.push({name: ""});
+      this.parts.push({part_name: "", required: 0});
     },
     deletePart: function (part) {
       if (this.parts.length == 1) { return; }
