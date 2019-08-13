@@ -349,7 +349,8 @@ exports.getSongs = function getSongs() {
       const sql = 'SELECT parts.*, users.name AS entry_name' +
             '  FROM parts' +
             '  LEFT JOIN users USING(user_id)' +
-            '  WHERE parts.status IS NULL';
+            '  WHERE parts.status IS NULL' +
+            '  ORDER BY parts.`order` ASC';
       return pSqlite3.runStatementAndGetAll(_db, sql);
       })
     .then(rows => {

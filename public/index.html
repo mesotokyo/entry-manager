@@ -95,24 +95,36 @@
                 <small id="new-song-url-help" class="form-text text-muted">募集したいパートをそれぞれ入力</small>
 
                 <div class="form-group form-row" v-for="part in parts">
-                  <div class="col">
+                  <div class="col-5">
                     <input type="input" class="form-control" :disabled="locked || part.user_id" aria-describedby="new-song-url-help" placeholder="パート" v-model="part.part_name">
                   </div>
-                  <div class="col">
+                  <div class="col-4" v-show="!changeOrderMode">
                     <select class="form-control" :disabled="locked"
                             v-model="part.required">
                       <option value="0">任意</option>
                       <option value="1">必須</option>
                     </select>
                   </div>
-                  <div class="col">
+                  <div class="col" v-show="!changeOrderMode">
                     <button type="button" class="btn btn-danger"
                             :disabled="parts.length == 1 || locked || part.user_id"
                             @click="deletePart(part)">削除</button>
                   </div>
-                </div>
+                  <div class="col-5" v-show="changeOrderMode">
+                    <button type="button" class="btn btn-outline-secondary"
+                            :disabled="locked"
+                            @click="movePart(part,-1)">↑</button>
+                    <button type="button" class="btn btn-outline-secondary"
+                            v-show="changeOrderMode"
+                            :disabled="locked"
+                            @click="movePart(part,1)">↓</button>
+                  </div>
+                </div><!-- .form-group -->
+                  <button type="button" class="btn btn-info" :disabled="locked" @click="addPart">入力欄を追加</button>
+                <button type="button" class="btn btn-outline-info"
+                        :class="{active: changeOrderMode}"
+                        :disabled="locked" @click="changeOrderMode = !changeOrderMode">並び替え</button>
                 
-                <button type="button" class="btn btn-info" :disabled="locked" @click="addPart">入力欄を追加</button>
               </div>
               <div class="alert alert-info" v-if="mode == 'edit' && showDeletePartAlert" >
                 ※エントリー済みのパートは削除/編集できません。先にエントリーを取り消してください。

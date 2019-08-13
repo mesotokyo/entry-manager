@@ -294,6 +294,7 @@ Vue.component('edit-song-dialog', {
       locked: false,
       succeed: false,
       mode: "create",
+      changeOrderMode: false,
       showDeletePartAlert: false,
     };
   },
@@ -324,6 +325,7 @@ Vue.component('edit-song-dialog', {
     },
     hide: function () {
       this.state.onSongEdit = false;
+      this.changeOrderMode = false;
       if (this.succeed || this.mode == "edit") {
         this.resetAll();
         this.mode = "create";
@@ -360,6 +362,18 @@ Vue.component('edit-song-dialog', {
 
       this.locked = false;
       this.succeed = false;
+    },
+    movePart: function (part, direction) {
+      var index = this.parts.findIndex(el => { return el === part; });
+      if (direction == 1) {
+        if (index != this.parts.length - 1) {
+          this.parts.splice(index, 2, this.parts[index+1], this.parts[index]);
+        }
+      } else if  (direction == -1) {
+        if (index != 0) {
+          this.parts.splice(index-1, 2, this.parts[index], this.parts[index-1]);
+        }
+      }
     },
     addPart: function () {
       this.parts.push({part_name: "", required: 0});
