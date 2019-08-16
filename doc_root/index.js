@@ -1,10 +1,10 @@
 
 function sendRequest(method, params, callback) {
   var xhr = new XMLHttpRequest();
-  xhr.addEventListener('load', () => {
+  xhr.addEventListener('load', function () {
     var resp = xhr.response || {};
     // hack for IE
-    if (resp && xhr.responseType === "") {
+    if (resp && xhr.responseType !== "json") {
       try {
         resp = JSON.parse(xhr.response);
       } catch(e) {
@@ -17,7 +17,11 @@ function sendRequest(method, params, callback) {
     }
     callback(xhr, resp);
   });
-  xhr.responseType = 'json';
+
+  try {
+    xhr.responseType = 'json';
+  } catch (e) {
+  }
   xhr.open('POST', '/api/');
   xhr.setRequestHeader("Content-Type", "application/json");
   params.token = (entryConfig || {}).token || "";
@@ -364,7 +368,7 @@ Vue.component('edit-song-dialog', {
       this.succeed = false;
     },
     movePart: function (part, direction) {
-      var index = this.parts.findIndex(el => { return el === part; });
+      var index = this.parts.findIndex(function (el) { return el === part; });
       if (direction == 1) {
         if (index != this.parts.length - 1) {
           this.parts.splice(index, 2, this.parts[index+1], this.parts[index]);
@@ -523,23 +527,24 @@ var app = new Vue({
     updateSongList: function () {
       // load song list
       this.isLoadingSongs = true;
-      sendRequest("getSongs", {}, (err, resp) => {
-        this.isLoadingSongs = false;
+      var that = this;
+      sendRequest("getSongs", {}, function (err, resp) {
+        that.isLoadingSongs = false;
         if (err || resp.error) {
           console.log(resp);
           if (resp.error && resp.error.code == -32200) {
-            this.error = "invalid_token";
+            that.error = "invalid_token";
             return;
           }
-          this.error = "list_songs_failed";
+          that.error = "list_songs_failed";
           return;
         }
-        this.songs.splice(0, this.songs.length);
+        that.songs.splice(0, that.songs.length);
         //for (var song of resp.result.songs) {
         for (var i in resp.result.songs) {
           var song = resp.result.songs[i];
           song._showPlayer = false;
-          this.songs.push(song);
+          that.songs.push(song);
         }
       });
     },
@@ -555,24 +560,25 @@ var app = new Vue({
         }
         data.offset = this.logs.length;
       };
-      sendRequest("getLogs", data, (err, resp) => {
-        this.isLoadingLogs = false;
+      var that = this;
+      sendRequest("getLogs", data, function (err, resp) {
+        that.isLoadingLogs = false;
         if (err || resp.error) {
           console.log(resp);
           if (resp.error && resp.error.code == -32200) {
-            this.error = "invalid_token";
+            that.error = "invalid_token";
             return;
           }
-          this.error = "list_logs_failed";
+          that.error = "list_logs_failed";
           return;
         }
-        this.logs.splice(0, this.logs.length);
+        that.logs.splice(0, that.logs.length);
         //for (var log of resp.result.logs) {
         for (var i in resp.result.logs) {
           var log = resp.result.logs[i];
-          this.logs.push(log);
+          that.logs.push(log);
         }
-        this.totalLogs = resp.result.total_logs;
+        that.totalLogs = resp.result.total_logs;
       });
     },
     entry: function (song, part) {
@@ -587,8 +593,9 @@ var app = new Vue({
         var data = { song_id: song.song_id };
         var c = this;
         this.isLoadingComments = true;
-        sendRequest("getComments", data, (err, resp) => {
-          this.isLoadingComments = false;
+        var that = this;
+        sendRequest("getComments", data, function (err, resp) {
+          that.isLoadingComments = false;
           c.$set(song, "comments", resp.result.comments);
         });
       }
