@@ -38,7 +38,9 @@ exports.getUser = function getUser(params) {
       return Promise.reject("invalid_params");
     })
     .finally(() => {
-      _db.close();
+      if (_db) {
+        _db.close();
+      }
     });
 };
 
@@ -51,7 +53,9 @@ exports.createUser = function createUser(params) {
       return pSqlite3.runStatement(db, sql, params.name);
     })
     .finally(() => {
-      _db.close();
+      if (_db) {
+        _db.close();
+      }
     });
 
 };
@@ -73,7 +77,9 @@ exports.getParts = function getParts(params) {
       }
     })
     .finally(() => {
-      _db.close();
+      if (_db) {
+        _db.close();
+      }
     });
 };
 
@@ -90,7 +96,9 @@ exports.getPart = function getPart(partId) {
       return pSqlite3.runStatementAndGet(db, sql, partId);
     })
     .finally(() => {
-      _db.close();
+      if (_db) {
+        _db.close();
+      }
     });
 };
 
@@ -143,7 +151,9 @@ exports.createSong = function createSong(params) {
       return Promise.resolve(_result);
     })
     .finally(() => {
-      _db.close();
+      if (_db) {
+        _db.close();
+      }
     });
 };
 
@@ -164,7 +174,9 @@ exports.updateSong = function updateSong(params) {
                                    params.status, params.song_id);
     })
     .finally(() => {
-      _db.close();
+      if (_db) {
+        _db.close();
+      }
     });
 };
 
@@ -204,7 +216,7 @@ exports.addPart = function addPart(params) {
     })
     .then(result => {
       if (!result.changes) {
-        return Promise.reject("update_timestamp_failed");
+        return Promise.reject("addPart_update_timestamp_failed");
       }
       return pSqlite3.commit(_db);
     })
@@ -212,7 +224,9 @@ exports.addPart = function addPart(params) {
       return Promise.resolve(_result);
     })
     .finally(() => {
-      _db.close();
+      if (_db) {
+        _db.close();
+      }
     });
 };
 
@@ -247,7 +261,7 @@ exports.updatePart = function updatePart(params) {
     })
     .then(result => {
       if (!result.changes) {
-        return Promise.reject("update_timestamp_failed");
+        return Promise.reject("updatePart_update_timestamp_failed");
       }
       return pSqlite3.commit(_db);
     })
@@ -261,7 +275,9 @@ exports.updatePart = function updatePart(params) {
       return Promise.resolve(_result);
     })
     .finally(() => {
-      _db.close();
+      if (_db) {
+        _db.close();
+      }
     });
 };
 
@@ -300,7 +316,7 @@ exports.deletePart = function deletePart(partId) {
     })
     .then(result => {
       if (!result.changes) {
-        return Promise.reject("update_timestamp_failed");
+        return Promise.reject("deletePart_update_timestamp_failed");
       }
       return pSqlite3.commit(_db);
     })
@@ -314,7 +330,9 @@ exports.deletePart = function deletePart(partId) {
       return Promise.resolve(_result);
     })
     .finally(() => {
-      _db.close();
+      if (_db) {
+        _db.close();
+      }
     });
 };
 
@@ -329,7 +347,9 @@ exports.getSong = function getSong(songId) {
       return pSqlite3.runStatementAndGet(db, sql, songId);
     })
     .finally(() => {
-      _db.close();
+      if (_db) {
+        _db.close();
+      }
     });
 };
 
@@ -367,7 +387,9 @@ exports.getSongs = function getSongs() {
       return Promise.resolve(_songs);
     })
     .finally(() => {
-      _db.close();
+      if (_db) {
+        _db.close();
+      }
     });
 };
 
@@ -384,7 +406,9 @@ exports.createEntry = function createEntry(params) {
                                    params.part_id);
     })
     .finally(() => {
-      _db.close();
+      if (_db) {
+        _db.close();
+      }
     });
 };
 
@@ -400,7 +424,9 @@ exports.deleteEntry = function deleteEntry(partId) {
       return pSqlite3.runStatement(db, sql, partId);
     })
     .finally(() => {
-      _db.close();
+      if (_db) {
+        _db.close();
+      }
     });
 };
 
@@ -417,7 +443,9 @@ exports.createComment = function createComment(params) {
                                    params.song_id);
     })
     .finally(() => {
-      _db.close();
+      if (_db) {
+        _db.close();
+      }
     });
 };
 
@@ -432,7 +460,9 @@ exports.getComment = function getComment(comment_id) {
       return pSqlite3.runStatementAndGet(db, sql, comment_id);
     })
     .finally(() => {
-      _db.close();
+      if (_db) {
+        _db.close();
+      }
     });
 };
 
@@ -451,7 +481,9 @@ exports.countComments = function countComments(song_id) {
       }
     })
     .finally(() => {
-      _db.close();
+      if (_db) {
+        _db.close();
+      }
     });
 };
 
@@ -472,7 +504,9 @@ exports.getComments = function getComments(song_id) {
       }
     })
     .finally(() => {
-      _db.close();
+      if (_db) {
+        _db.close();
+      }
     });
 };
 
@@ -489,7 +523,9 @@ exports.deleteComment = function deleteComment(commentId) {
       return pSqlite3.runStatement(db, sql, commentId);
     })
     .finally(() => {
-      _db.close();
+      if (_db) {
+        _db.close();
+      }
     });
 };
 
@@ -510,7 +546,9 @@ exports.createLog = function createLog(params) {
                                   );
     })
     .finally(() => {
-      _db.close();
+      if (_db) {
+        _db.close();
+      }
     });
 };
 
@@ -533,7 +571,9 @@ exports.getLogs = function getLogs(params) {
                                             params.offset);
     })
     .finally(() => {
-      _db.close();
+      if (_db) {
+        _db.close();
+      }
     });
 };
 
@@ -546,6 +586,8 @@ exports.countLogs = function countLogs() {
         return pSqlite3.runStatementAndGet(db, sql);
     })
     .finally(() => {
-      _db.close();
+      if (_db) {
+        _db.close();
+      }
     });
 };

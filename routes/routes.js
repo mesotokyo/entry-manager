@@ -12,6 +12,25 @@ const moment = require('moment');
 
 model.setConfig(config.gamebattle);
 
+function _errorToString(err) {
+  if (err === undefined) {
+    return "";
+  }
+  console.error(err);
+
+  const str = err.toString();
+  if (err.fileName) {
+    str = str + `on ${err.filename}`;
+  }
+  if (err.lineNumber) {
+    str = str + `:${err.lineNumber}`;
+  }
+  if (err.columnNumber) {
+    str = str + `:${err.columnNumber}`;
+  }
+  return str;
+}
+
 function _dateTimeToLocal(string) {
   if (string === undefined) {
     return moment.utc().utcOffset(9).format("YYYY-MM-DD HH:mm:ss");
@@ -59,7 +78,7 @@ exports.createEntry = async function createEntry(req, res, next) {
     
     res.json({result: { part: part }});
   } catch (err) {
-    res.json({ error: { code: -32603, message: err.toString()} });
+    res.json({ error: { code: -32603, message: _errorToString(err)} });
   }
 };
 
@@ -91,7 +110,7 @@ exports.deleteEntry = async function deleteEntry(req, res, next) {
                            action: "delete_entry"});
     res.json({result: {part: part}});
   } catch (err) {
-    res.json({ error: { code: -32602, message: err.toString()} });
+    res.json({ error: { code: -32602, message: _errorToString(err)} });
     return;
   }
 };
@@ -131,7 +150,7 @@ exports.createComment = async function createComment(req, res, next) {
       res.json({ error: ERROR_CONSTRAINT_VIOLATION });
       return;
     }
-    res.json({ error: { code: -32603, message: err.toString()}});
+    res.json({ error: { code: -32603, message: _errorToString(err)}});
   }
 };
 
@@ -148,7 +167,7 @@ exports.getComments = async function getComments(req, res, next) {
     }
     res.json({ result: { comments: comments, total_comments: count.count } });
   } catch (err) {
-    res.json({ error: { code: -32603, message: err.toString() } });
+    res.json({ error: { code: -32603, message: _errorToString(err) } });
   }
 };
 
@@ -180,7 +199,7 @@ exports.deleteComment = async function deleteComment(req, res, next) {
                            action: "delete_comment"});
     res.json({ result: { comment: comment }});
   } catch (err) {
-    res.json({ code: -32603, message: err.toString() });
+    res.json({ code: -32603, message: _errorToString(err) });
     return;
   }
 };
@@ -248,7 +267,7 @@ exports.createSong = async function createSong(req, res, next) {
       res.json({ error: ERROR_CONSTRAINT_VIOLATION });
       return;
     }
-    res.json({ error: { code: -32603, message: err.toString()}});
+    res.json({ error: { code: -32603, message: _errorToString(err)}});
   }
 };
 
@@ -322,7 +341,7 @@ exports.updateSong = async function updateSong(req, res, next) {
         try {
           await Promise.all(requests);
         } catch (err) {
-          res.json({error: {code: -32603, message: err.toString()}});
+          res.json({error: {code: -32603, message: _errorToString(err)}});
           return;
         }
       }
@@ -352,7 +371,7 @@ exports.updateSong = async function updateSong(req, res, next) {
       res.json({error: ERROR_CONSTRAINT_VIOLATION});
       return;
     }
-    res.json({error: {code: -32603, message: err.toString()}});
+    res.json({error: {code: -32603, message: _errorToString(err)}});
   }
 
 };
@@ -389,7 +408,7 @@ exports.addPart = async function addPart(req, res, next) {
     
     res.json({result: { part: params }});
   } catch (err) {
-    res.json({ error: { code: -32603, message: err.toString()} });
+    res.json({ error: { code: -32603, message: _errorToString(err)} });
   }
   
 };
@@ -425,7 +444,7 @@ exports.deletePart = async function deletePart(req, res, next) {
     
     res.json({result: { part: part }});
   } catch (err) {
-    res.json({ error: { code: -32603, message: err.toString()} });
+    res.json({ error: { code: -32603, message: _errorToString(err)} });
   }
   
 };
@@ -447,7 +466,7 @@ exports.getSongs = async function getSongs(req, res, next) {
     }
     res.json({ result: { songs: songs } });
   } catch (err) {
-    res.json({ error: { code: -32603, message: err.toString() } });
+    res.json({ error: { code: -32603, message: _errorToString(err) } });
   }
 };
   
@@ -501,6 +520,6 @@ exports.getLogs = async function listLogs(req, res, next) {
     }
     res.json({ result: { logs: logs, total_logs: count.count } });
   } catch (err) {
-    res.json({ error: { code: -32603, message: err.toString() } });
+    res.json({ error: { code: -32603, message: _errorToString(err) } });
   }
 };

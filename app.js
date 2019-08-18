@@ -29,16 +29,10 @@ app.use(router);
 
 // static files
 const accessToken = config.gamebattle.token;
+
 app.use(`/gamebattle/${accessToken}/edit/`, serveStatic(path.join(__dirname, 'private/gamebattle'), { index: "index.html" }));
 
-// server side rendering
-/*
-app.use('/gamebattle/', serverSideRenderer({ templateDir: "./template",
-                                             index: "index.html"
-                                           }));
-*/
 app.use(`/gamebattle/`, serveStatic(path.join(__dirname, 'public/gamebattle'), { index: "index.html" }));
-
 
 // root
 app.use('/', serveStatic(path.join(__dirname, 'doc_root')));

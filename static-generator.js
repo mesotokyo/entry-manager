@@ -15,9 +15,9 @@ exports.generate = function generate(config) {
 };
 
 function generatePage(eventId, eventConfig) {
-  const vars = Object.assign(eventConfig);
+  const vars = { eventId: eventId };
+  Object.assign(vars, eventConfig);
   delete vars.database;
-  vars.eventId = eventId;
 
   // create output directories
   const publicTargetDir = path.join(publicDir, eventId);
