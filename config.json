@@ -1,5 +1,7 @@
 {
   "gamebattle": {
+    "title": "バトル曲セッション",
+    "description": "「<a href=\"http://bandoff.info/gamebattle/\">【ゲーム音楽】バトル曲セッション</a>」のエントリーリストです。詳細やエントリーについては<a href=\"http://bandoff.info/gamebattle/\">bandoff.infoのセッションページ</a>からご確認ください。",
     "database": "./data/data.sqlite",
     "token": "0644d25c7f4c0ebf"
   }

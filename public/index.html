@@ -332,7 +332,7 @@
             <div class="my-2 song row border-bottom" v-for="song in songs">
               <div class="col-md-4 song-info mb-2">
                 <div class="mb-2">
-                  <span class="h5" v-text="song.title"></span>
+                  <span class="font-weight-bold h5" v-text="song.title"></span>
                   <span v-if="song.readiness" class="text-primary font-weight-bold">［成立］</span>
                 </div>
                 <div class="">
@@ -371,7 +371,7 @@
                     <span v-text="part.part_name"></span>
                     <sup v-if="part.required" class="text-primary">※</sup>：
                     <span v-if="part.entry_name">
-                      <span v-text="part.entry_name"></span>
+                      <span class="font-weight-bold" v-text="part.entry_name"></span>
                       <span v-if="part.instrument_name">
                         （<span v-text="part.instrument_name"></span>）
                       </span>
